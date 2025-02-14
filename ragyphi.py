@@ -1,6 +1,6 @@
 #################################################
 # Author        : Philip Varghese Modayil
-# Last Update   : 06.02.2025
+# Last Update   : 14.02.2025
 # Topic         : Document pre process
 # Documents     : pdf
 #################################################
@@ -17,6 +17,7 @@ To Do:
 #                                     Imports
 #####################################################################################
 import os
+import uuid
 from tqdm import tqdm
 
 # pdf
@@ -29,7 +30,6 @@ import numpy as np
 import faiss
 
 # Text extraction
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 
 # LLM
@@ -43,7 +43,7 @@ from dataclasses import dataclass
 @dataclass
 class ExtractedData:
     index: faiss.swigfaiss_avx2.IndexFlatL2
-    metadata: pd.DataFrame
+    raw_data: pd.DataFrame
 
 @dataclass
 class LLMResponse:
@@ -55,13 +55,26 @@ class LLMResponse:
 #####################################################################################
 # Create the directories
 def create_directories(base_dir):
-    directories = ["images", "text", "context","tables", "page_images"]
+    directories = ["images", "text","tables"]
     for dir in directories:
         os.makedirs(os.path.join(base_dir, dir), exist_ok=True)
         
 ###########################################
 #        Document Processing: PDF
-###########################################    
+###########################################   
+#####################################################################################
+#                       Extracted Data Storage Schematics
+#####################################################################################
+# {
+# "uuid": unique id,
+# "text": generated summary,
+# "metadata":{
+#     "file": name of the document,
+#     "page": page number, 
+#     "type": type of the extarcted data,
+#     "original_content": original content which was summarized
+#      }
+# } 
 def extractAndContextualizePDFPage(base_dir: str, 
                       pdf_path: str, 
                       page: pdfplumber.page.Page,  
@@ -70,83 +83,93 @@ def extractAndContextualizePDFPage(base_dir: str,
     
     # Contextualize prompt
     ###############################################
-    contextualizerInstruction = """You are a helpful assistant capable of describing tabular data."""
+    contextualizerInstruction = """You are a helpful assistant capable of summarizing texts and tables for retrieval."""
     
-    contextualizerPrompt = """ Given the following table and its context from the original document,
-    provide a detailed description of the table. Include the table heading, context of the table, important values and information from the table.
+    contextualizerPrompt = """ Carefully analyse the text or table data from the document and provide a detailed summary.\
+    These summaries will be embedded and used to retrieve the raw text or table elements.\
+    Also generate hypothetical questions that can be answered based on the the given context.
 
-    Original Document Context:
-    {document_context}
+    Document to be summarized:
+    {content_to_summarize}
 
-    Table Content:
-    {table_content}
-
-    Please provide:
-    1. A comprehensive description of the table.
-    2. Important values from the table
+    Please structure your response in the following format:
+    1. A concise summary of the table or text that is well optimized for retrieval.
+    2. List the key observations and relevant metrics.
+    3. List of the major keywords.
+    4. A list of exactly 3 hypothetical questions that the above document could be used to answer.
     """
-    # Get page number
+    # Get unique identifiers for the page
     ###########################################
     page_number = page.page_number
     pdf_filename = os.path.basename(pdf_path)[:-4]
-    # Extract text
+    
+    # Extract text and contextualize
     ###########################################
     page_content_text = page.extract_text()
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=700, chunk_overlap=200)
-    chunks = text_splitter.split_text(page_content_text)
     
-    for id, chunk in enumerate(chunks):
-        text_file_name = os.path.join(base_dir,"text",f"{pdf_filename}_text_{page_number}_{id}.txt")
-        try:
-            with open(text_file_name, 'w') as f:
-                f.write(chunk)
-        except OSError:
-            print(f"Something wrong with file name: {text_file_name}")
-            
-        extracted_items.append({"page": page_number, 
-                    "type": "text", 
-                    "text": chunk, 
-                    "path": pdf_filename})
+    # Summarize
+    content_to_summarize = f"Page text:\n{page_content_text}"
+    generated_context_text = llm.invoke(
+    [SystemMessage(content=contextualizerInstruction)]
+    + [HumanMessage(content=contextualizerPrompt.format(content_to_summarize=content_to_summarize))]
+    ).content  
     
+    # Store in structured format
+    extracted_items.append({
+                "uuid": str(uuid.uuid4()),
+                "text": generated_context_text,
+                "metadata":{
+                    "file": pdf_filename,
+                    "page": page_number, 
+                    "type": "text",
+                    "original_content": page_content_text}
+                })
+    
+    # Save text
+    text_filename = os.path.join(base_dir,"text",f"{pdf_filename}_{page_number}_text.txt") 
+    text_summary_filename = os.path.join(base_dir,"text",f"{pdf_filename}_{page_number}_context.md") 
+    try:
+        with open(text_filename, 'w') as f:
+            f.write(page_content_text)
+        with open(text_summary_filename, 'w') as f:
+            f.write(generated_context_text)
+    except OSError:
+        print(f"Something wrong with file name: {text_filename}")
     
     # Extract tables
     #########################################
-    table_content_text = ""
     page_content_tables = page.extract_tables()
     for table_id,table in enumerate(page_content_tables):
+        # Convert extracted table to pandas dataframe
         df = pd.DataFrame(table[1:], columns=table[0])  # Create DataFrame
-        table_file_name = os.path.join(base_dir,"tables",f"{pdf_filename}_table_{page_number}_{table_id}.csv") 
+        table_content_text = df.to_markdown()
         
+        # Contextualize the table using llm
+        content_to_summarize = f"Page text:\n{page_content_text}\nTable:\n{table_content_text}"
+        generated_context_table = llm.invoke(
+        [SystemMessage(content=contextualizerInstruction)]
+        + [HumanMessage(content=contextualizerPrompt.format(content_to_summarize=content_to_summarize))]
+        ).content  
+        
+        extracted_items.append({
+                    "uuid": str(uuid.uuid4()), 
+                    "text": generated_context_table,
+                    "metadata":{
+                        "file": pdf_filename,
+                        "page": page_number,
+                        "type": "table",
+                        "original_content": table_content_text}
+                    })
+
+        # Save table
+        table_filename = os.path.join(base_dir,"tables",f"{pdf_filename}_{page_number}_table_{table_id}.csv") 
+        table_summary_filename = os.path.join(base_dir,"tables",f"{pdf_filename}_{page_number}_context_{table_id}.md") 
         try:
-            df.to_csv(table_file_name,index=False)
+            df.to_csv(table_filename,index=False)
+            with open(table_summary_filename, 'w') as f:
+                f.write(generated_context_table)
         except OSError:
-             print(f"Something wrong with file name: {table_file_name}") 
-        
-        table_content_text += "\n\n" + df.to_markdown()
-    
-    # Contextualize using llm
-    #########################################
-    generated_context = llm.invoke(
-    [SystemMessage(content=contextualizerInstruction)]
-    + [HumanMessage(content=contextualizerPrompt.format(document_context=page_content_text,table_content=table_content_text))]
-    )    
-    generated_context_summary = "{summary}\n\n# Relevant Tables:\n{tables}".format(summary=generated_context.content, tables=table_content_text)
-    
-    # Save data
-    try:
-        
-        context_file_name = os.path.join(base_dir,"context",f"{pdf_filename}_context_{page_number}.md")
-        # Save the generated page context
-        with open(context_file_name, 'w') as f:
-                f.write(generated_context_summary)
-        
-    except OSError:
-        print(f"Something wrong with file name: {context_file_name}")    
-    
-    extracted_items.append({"page": page_number, 
-                            "type": "page_context", 
-                            "text": generated_context_summary, 
-                            "path": pdf_filename})    
+             print(f"Something wrong with file name: {table_filename}") 
     
     return extracted_items
 
@@ -169,13 +192,7 @@ def loadPDFAndExtract(base_dir: str,
 
 def convertExtractedItemsToDF(extracted_items: List[dict]) -> pd.DataFrame:
     # Convert the list of dictionaries into a single dataframe
-    df_extracted_items = pd.DataFrame(extracted_items)
-
-    df_txt = df_extracted_items[df_extracted_items["type"] == "text"]
-    df_metadata = df_extracted_items[df_extracted_items["type"] != "text"]
-    df_merged = pd.merge(df_txt, df_metadata, on=["page","path"], how="inner",suffixes=("", "_metadata"))
-
-    return df_merged
+    return pd.DataFrame(extracted_items)
 
 ###########################################
 #        Embed and Store Data
@@ -185,12 +202,11 @@ def embedExractedData(extracted_data_df: pd.DataFrame) -> pd.DataFrame:
     embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
     
     try:
-        # The extracted_data_df has column "text" and "text_metadata"
-        # The column "text" has text chunk values which need to be embedded
+        # The extracted_data_df has column "text" which contains the text chunks to be embedded
         print("Embedding text chunks..........")
         extracted_data_df['embedding'] = extracted_data_df["text"].apply(lambda x: embedding_model.embed_query(x))
     except KeyError:
-        raise Exception("Did not find column 'text' in the extracted_data dataframe.\nMake sure text is present in the document.")
+        raise Exception("Did not find column 'text' in the extracted_data dataframe.\nMake sure extractable text is present in the document.")
     
     return extracted_data_df
 
@@ -270,7 +286,7 @@ def loadData() -> ExtractedData:
         faiss_index = faiss.read_index(vector_store_filename)
         
         # Load rest of the data
-        metadata = pd.read_parquet(extracted_data_filename)
+        raw_data = pd.read_parquet(extracted_data_filename)
         print("FAISS Index and extracted data loaded successfully.")
     
     else:
@@ -281,10 +297,10 @@ def loadData() -> ExtractedData:
         faiss_index = faiss.read_index(vector_store_filename)
         
         # Load rest of the data
-        metadata = pd.read_parquet(extracted_data_filename)
+        raw_data = pd.read_parquet(extracted_data_filename)
         print("FAISS Index and extracted data loaded successfully.")
         
-    return ExtractedData(index=faiss_index,metadata=metadata)
+    return ExtractedData(index=faiss_index,raw_data=raw_data)
     
 def retrieveContext(question: str,
                     extracted_data: ExtractedData, 
@@ -292,7 +308,7 @@ def retrieveContext(question: str,
     
     # Extracted data
     loaded_index = extracted_data.index
-    loaded_data = extracted_data.metadata
+    loaded_data = extracted_data.raw_data
 
     # Embed the input question
     embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
@@ -305,18 +321,15 @@ def retrieveContext(question: str,
 
     # Extract relevant data
     relevant_context_data = loaded_data.loc[indices]
-    relevant_context_data["combined_path"] = relevant_context_data["path"] + "_" + relevant_context_data["page"].astype(str)
-    unique_metadata = relevant_context_data.drop_duplicates(subset=["combined_path"])
-
-    # Relevant text chunks - unstructured
-    relevant_context_text = '\n\n'.join(relevant_context_data["text"])
-
-    # Relevant metadata - structured summaries of pages
-    metadata_strings = unique_metadata.apply(lambda row: f"{row['text_metadata']}\nAbove information was found in file: {row['path']}, page: {row['page']}", axis=1)
-    relevant_context_metadata = '\n\n'.join(metadata_strings)
     
-    # Fromatting context
-    relevant_context = f"Unstructured Text Information:\n\n{relevant_context_text}\n\nStructured Page Summaries:\n\n{relevant_context_metadata}"
+
+    # Relevant context string in a structured format
+    relevant_context_object = relevant_context_data.apply(
+    lambda row: f"Relevant context was found in file: {row['metadata']['file']}, page: {row['metadata']['page']}\n\n{row['text']}\n" + 
+                 (f"\nTable metnioned in above summary:\n\n{row['metadata']['original_content']}\n" if row['metadata']['type'] == "table" else ""),
+    axis=1)
+    
+    relevant_context = "\n".join(relevant_context_object) # above line creates a pd.Series object convert it into string
     
     return relevant_context
 
