@@ -1,12 +1,13 @@
 #################################################
 # Author        : Philip Varghese Modayil
-# Last Update   : 14.02.2025
+# Last Update   : 17.02.2025
 # Topic         : Document pre process
 # Documents     : pdf
 #################################################
 """
 To Do: 
     Add multi document processing capabilities
+    Add Image processing capabilities
 """
 
 #####################################################################################
@@ -29,19 +30,19 @@ import faiss
 from langchain_huggingface import HuggingFaceEmbeddings
 
 # LLM
-from langchain_ollama import ChatOllama
+from langchain_community.chat_models import ChatOllama
 from langchain_core.messages import HumanMessage, SystemMessage
+from ollama._types import ResponseError
 
 # Typing
-from typing import List
 from dataclasses import dataclass
 
-@dataclass
+@dataclass(frozen=True)
 class ExtractedData:
     index: faiss.swigfaiss_avx2.IndexFlatL2
     raw_data: pd.DataFrame
 
-@dataclass
+@dataclass(frozen=True)
 class LLMResponse:
     response: str
     context: str
@@ -50,7 +51,19 @@ class LLMResponse:
 #                                    Functions
 #####################################################################################
 # Create the directories
-def create_directories(base_dir):
+def create_directories(base_dir: str) -> None:
+    """
+    Takes in a base directory path and creates required folders in it
+    Parameters
+    ----------
+    base_dir : str
+        base directory path
+
+    Returns
+    -------
+    None
+        return nothing, creates the directories
+    """
     directories = ["images", "text","tables"]
     for dir in directories:
         os.makedirs(os.path.join(base_dir, dir), exist_ok=True)
@@ -58,25 +71,22 @@ def create_directories(base_dir):
 ###########################################
 #        Document Processing: PDF
 ###########################################   
-#####################################################################################
-#                       Extracted Data Storage Schematics
-#####################################################################################
-# {
-# "uuid": unique id,
-# "text": generated summary,
-# "metadata":{
-#     "file": name of the document,
-#     "page": page number, 
-#     "type": type of the extarcted data,
-#     "original_content": original content which was summarized
-#      }
-# } 
-def extractAndContextualizePDFPage(base_dir: str, 
-                      pdf_path: str, 
-                      page: pdfplumber.page.Page,  
-                      extracted_items: list,
-                      llm: ChatOllama) -> List[dict]:
-    
+def contextualizeData(content_to_summarize: str,
+                      llm: ChatOllama) -> str:
+    """
+    Takes in text to be summarised and summarises it.
+    Parameters
+    ----------
+    content_to_summarize : str
+        text / table along with context that needs to be summarised 
+    llm: ChatOllama 
+        Ollama chat model default value llama3.2-8b model
+
+    Returns
+    -------
+    str
+        summarised text 
+    """
     # Contextualize prompt
     ###############################################
     contextualizerInstruction = """You are a helpful assistant capable of summarizing texts and tables for retrieval."""
@@ -94,6 +104,52 @@ def extractAndContextualizePDFPage(base_dir: str,
     3. List of the major keywords.
     4. A list of exactly 3 hypothetical questions that the above document could be used to answer.
     """
+    
+    return llm.invoke(
+    [SystemMessage(content=contextualizerInstruction)]
+    + [HumanMessage(content=contextualizerPrompt.format(content_to_summarize=content_to_summarize))]
+    ).content
+    
+def extractAndContextualizePDFPage(base_dir: str, 
+                      pdf_path: str, 
+                      page: pdfplumber.page.Page,  
+                      extracted_items: list[dict],
+                      llm: ChatOllama) -> list[dict]:
+    """
+    Takes in pdf pages and extracts text, tables and summarize each along with context using LLM model.
+    Parameters
+    ----------
+    base_dir : str
+        base directory path
+    pdf_path : str
+        path string to the pdf file being analyzed
+    page: pdfplumber.page.Page
+        pdfplumber library page object
+    extracted_items: list[dict]
+        list of dictionaries with the below format
+        {
+         "uuid": unique id,
+         "text": generated summary,
+         "metadata":{
+             "file": name of the document,
+             "page": page number, 
+             "type": type of the extarcted data,
+             "original_content": original content which was summarized
+              }
+        } 
+    llm: ChatOllama 
+        Ollama chat model default value llama3.2-8b model
+
+    Returns
+    -------
+    list[dict]
+        extracted data 
+    
+    Raises
+    ------
+    Exception
+       OSError if the path string contains unaccepted characters when trying to save data locally
+    """
     # Get unique identifiers for the page
     ###########################################
     page_number = page.page_number
@@ -105,15 +161,11 @@ def extractAndContextualizePDFPage(base_dir: str,
     
     # Summarize
     content_to_summarize = f"Page text:\n{page_content_text}"
-    generated_context_text = llm.invoke(
-    [SystemMessage(content=contextualizerInstruction)]
-    + [HumanMessage(content=contextualizerPrompt.format(content_to_summarize=content_to_summarize))]
-    ).content  
-    
+
     # Store in structured format
     extracted_items.append({
                 "uuid": str(uuid.uuid4()),
-                "text": generated_context_text,
+                "text": contextualizeData(content_to_summarize,llm),
                 "metadata":{
                     "file": pdf_filename,
                     "page": page_number, 
@@ -128,11 +180,11 @@ def extractAndContextualizePDFPage(base_dir: str,
         with open(text_filename, 'w') as f:
             f.write(page_content_text)
         with open(text_summary_filename, 'w') as f:
-            f.write(generated_context_text)
+            f.write(extracted_items[-1]["text"]) # last generated context summary
     except OSError:
         print(f"Something wrong with file name: {text_filename}")
     
-    # Extract tables
+    # Extract tables and contextualize
     #########################################
     page_content_tables = page.extract_tables()
     for table_id,table in enumerate(page_content_tables):
@@ -141,15 +193,12 @@ def extractAndContextualizePDFPage(base_dir: str,
         table_content_text = df.to_markdown()
         
         # Contextualize the table using llm
-        content_to_summarize = f"Page text:\n{page_content_text}\nTable:\n{table_content_text}"
-        generated_context_table = llm.invoke(
-        [SystemMessage(content=contextualizerInstruction)]
-        + [HumanMessage(content=contextualizerPrompt.format(content_to_summarize=content_to_summarize))]
-        ).content  
+        content_to_summarize = f"Page text:\n{page_content_text}\nTable:\n{table_content_text}" 
         
+        # Store in structured format
         extracted_items.append({
                     "uuid": str(uuid.uuid4()), 
-                    "text": generated_context_table,
+                    "text": contextualizeData(content_to_summarize,llm),
                     "metadata":{
                         "file": pdf_filename,
                         "page": page_number,
@@ -163,15 +212,32 @@ def extractAndContextualizePDFPage(base_dir: str,
         try:
             df.to_csv(table_filename,index=False)
             with open(table_summary_filename, 'w') as f:
-                f.write(generated_context_table)
+                f.write(extracted_items[-1]["text"]) # last generated context summary
         except OSError:
              print(f"Something wrong with file name: {table_filename}") 
     
     return extracted_items
 
-def loadPDFAndExtract(base_dir: str, 
-                      extracted_items: list, 
-                      llm: ChatOllama) -> List[dict]:
+def loadFileAndExtract(base_dir: str, 
+                      extracted_items: list[dict], 
+                      llm: ChatOllama) -> list[dict]:
+    """
+    Load the file types within the given base_dir path and extract data from them
+
+    Parameters
+    ----------
+    base_dir : str
+        base directory path
+    extracted_items : list[dict]
+        list to store the extracted data
+    llm : ChatOllama
+        Ollama chat model default value llama3.2-8b model
+
+    Returns
+    -------
+    list[dict]
+        extracted data
+    """
     
     for file in os.listdir(base_dir):
         if file.endswith('.pdf'):
@@ -186,7 +252,20 @@ def loadPDFAndExtract(base_dir: str,
         
     return extracted_items   
 
-def convertExtractedItemsToDF(extracted_items: List[dict]) -> pd.DataFrame:
+def convertExtractedItemsToDF(extracted_items: list[dict]) -> pd.DataFrame:
+    """
+    Convert the extracted_items list of dictionaries to pandas dataframe
+
+    Parameters
+    ----------
+    extracted_items : list[dict]
+        extracted data
+
+    Returns
+    -------
+    pd.DataFrame
+        dataframe
+    """
     # Convert the list of dictionaries into a single dataframe
     return pd.DataFrame(extracted_items)
 
@@ -194,6 +273,24 @@ def convertExtractedItemsToDF(extracted_items: List[dict]) -> pd.DataFrame:
 #        Embed and Store Data
 ###########################################  
 def embedExractedData(extracted_data_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Embed the text(contextualized) column in the dataframe
+
+    Parameters
+    ----------
+    extracted_data_df : pd.DataFrame
+        extracted data
+
+    Returns
+    -------
+    pd.DataFrame
+        datframe with embeddings
+
+    Raises
+    ------
+    Exception
+       KeyError if the column 'text' is not present 
+    """
     # Embedding model
     embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
     
@@ -207,6 +304,19 @@ def embedExractedData(extracted_data_df: pd.DataFrame) -> pd.DataFrame:
     return extracted_data_df
 
 def indexAndStore(extracted_data_df: pd.DataFrame) -> None:
+    """
+    Create a FAISS vector store and save both vector store and extracted data locally
+
+    Parameters
+    ----------
+    extracted_data_df : pd.DataFrame
+        extracted data
+
+    Raises
+    ------
+    Exception
+        KeyError if column 'embedding' is not in the dataframe
+    """
     print("Storing vectors and metadata..........")
     try:
         # Convert the embeddings(array) to an array of arrays
@@ -239,7 +349,19 @@ def indexAndStore(extracted_data_df: pd.DataFrame) -> None:
     extracted_data_df.to_parquet(extracted_data_filename, compression='snappy')
 
 def processDocuments(local_llm: str = "llama3.2:3b-instruct-fp16") -> None:
-    
+    """
+    Create a data folder and process the files within it.
+
+    Parameters
+    ----------
+    local_llm : str, optional
+        name of llm model, by default "llama3.2:3b-instruct-fp16"
+        
+    Raises
+    ------
+    Exception
+        ResponseError if the ollama model is not found, try ollama pull model-name
+    """
     print("Creating directory data.......\n Please include any documents that need to be extracted if they are not already provided.")
     # Add more supported document type later
     print("Supported document types:\n- PDF")
@@ -252,12 +374,14 @@ def processDocuments(local_llm: str = "llama3.2:3b-instruct-fp16") -> None:
     
     # Load llm
     ###########################################
-    llm = ChatOllama(model=local_llm, temperature=0)
-    
+    try:
+        llm = ChatOllama(model=local_llm, temperature=0)
+    except ResponseError:
+        print("model 'llama3.2:3b-instruct-fp16' not found, try pulling it first using ollama pull llama3.2:3b-instruct-fp16")
     # Extract information from pdf files
     ###########################################
     extracted_items = []
-    extracted_items = loadPDFAndExtract(base_dir,extracted_items,llm)
+    extracted_items = loadFileAndExtract(base_dir,extracted_items,llm)
     
     # Convert to dataframe
     ###########################################
@@ -274,6 +398,14 @@ def processDocuments(local_llm: str = "llama3.2:3b-instruct-fp16") -> None:
 #        Load and Retrieve
 ###########################################      
 def loadData() -> ExtractedData:
+    """
+    Load the vector store and extracted data, if not found call processDocuments function
+
+    Returns
+    -------
+    ExtractedData
+        stored vector store and extracted data
+    """
     vector_store_filename = os.path.join(os.getcwd(),"vector_store",'faiss_index.index')
     extracted_data_filename = os.path.join(os.getcwd(),"vector_store",'extracted_data.parquet')
     
@@ -301,7 +433,23 @@ def loadData() -> ExtractedData:
 def retrieveContext(question: str,
                     extracted_data: ExtractedData, 
                     similarity_threshold: int = 3) -> str:
-    
+    """
+    Retrieve relevant context based on the input question
+
+    Parameters
+    ----------
+    question : str
+        input question from user
+    extracted_data : ExtractedData
+        vector_store and extracted data
+    similarity_threshold : int, optional
+        threshold for max number of similar options, by default 3
+
+    Returns
+    -------
+    str
+        relevant context in structured format
+    """
     # Extracted data
     loaded_index = extracted_data.index
     loaded_data = extracted_data.raw_data
@@ -333,6 +481,25 @@ def rag(question: str,
         extracted_data: ExtractedData,
         llm: ChatOllama,
         similarity_threshold: int = 3) -> LLMResponse:
+    """
+    RAG operation, takes in a question and reponds to it using extracted context
+
+    Parameters
+    ----------
+    question : str
+        input question from user
+    extracted_data : ExtractedData
+        vector_store and extracted data
+    llm: ChatOllama
+        Ollama model
+    similarity_threshold : int, optional
+        threshold for max number of similar options, by default 3
+
+    Returns
+    -------
+    LLMResponse
+        response,context
+    """
     # Prompt to the llm
     rag_prompt = """You are a PCB designer assistant for providing required information. 
 
