@@ -20,7 +20,7 @@ To get started with `ragyphi`, follow these steps:
    conda activate RAG  # Activate the newly created environment
    ```
 3. **Install Ollama**
-   : Make sure you have Ollama installed on your system. Then, run the following command in your terminal
+   : Make sure you have Ollama installed on your system [Ollama download](https://ollama.com/download). Then, run the following command in your terminal
    ```bash
    ollama pull llama3.2:3b-instruct-fp16
    ```
