@@ -28,7 +28,7 @@ To get started with `ragyphi`, follow these steps:
 Create a directory 'data' with the pdf files for RAG usage and run the following code.
 ```python
   # Import necessary libraries
-  import ragyphi as rp
+  from ragyphi import ragyphi as rp
   from langchain_community.chat_models import ChatOllama
   
   # Initialize the local language model (LLM)
