@@ -4,6 +4,7 @@ An entire RAG (Retrieval-Augmented Generation) pipeline library designed to stre
 ## Table of Contents
 - [Installation](#installation)
 - [Usage](#usage)
+- [Storage](#storage)
 
 ## Installation
 
@@ -46,3 +47,16 @@ Create a directory 'data' with the pdf files for RAG usage and run the following
   print("Response:", result.response)
   print("Context:", result.context)
 ```
+## Storage
+Each extracted data unit is stored in the following format. This list is then converted into a datframe and stored as parquet files.
+```json
+{
+    "uuid": "unique id",
+    "text": "generated summary",
+    "metadata": {
+        "file": "name of the document",
+        "page": "page number", 
+        "type": "type of the extracted data",
+        "original_content": "original content which was summarized"
+    }
+}
