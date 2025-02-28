@@ -1,0 +1,15 @@
+[project]
+name = "ragyphi"
+version = "0.1.0"
+description = "A complete RAG pipeline with added contextualisation"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "faiss-cpu>=1.10.0",
+    "langchain-community>=0.3.18",
+    "langchain-core>=0.3.40",
+    "numpy==1.26.4",
+    "ollama>=0.4.7",
+    "pandas>=2.2.3",
+    "sentence-transformers>=3.4.1",
+]
