@@ -8,6 +8,11 @@
 from langchain_community.chat_models import ChatOllama
 from langchain_core.messages import HumanMessage, SystemMessage
 
+# Image formatting
+import base64
+from io import BytesIO
+from PIL import Image
+
 ############################
 # Custom Exception
 ############################
@@ -81,6 +86,13 @@ class VLMContextualizer:
                 print(f"Unexpected error occured: {e}")
                 import sys
                 sys.exit(1) # exit the program
+    
+    def convertImageToBase64(self,pil_image: Image.Image) -> str:
+        buffered = BytesIO()
+        pil_image.save(buffered, format="PNG")
+        img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
+        
+        return img_str
                 
     def contextualizeDataWithVLM(self,content_to_summarize: str) -> str:
         """
