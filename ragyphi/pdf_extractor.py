@@ -9,13 +9,14 @@
 #                                     Imports
 #####################################################################################
 # global imports
-from . import os, pd
+from . import os, pd, np
 import gc
 
 # pdf
 from .contextualizer import Contextualizer
 import uuid
 import pdfplumber
+from PIL import Image
 from tqdm import tqdm
 
 #####################################################################################
@@ -113,6 +114,108 @@ def extractTable(page: pdfplumber.page.Page,
             print(f"Something wrong with file name: {table_filename}")
             
         return extracted_items
+
+def mergeBBOXES(bboxes: list[tuple]):
+    if not bboxes:
+        return []
+    
+    bboxes.sort(key=lambda b: b[1])  # Sort bboxes by top-left corner's y-coordinate
+
+    merged_bboxes = []
+    current_bbox = list(bboxes[0]) # Changing to list to allow mutability
+
+    # Bbox tuple structure: (x1,y1,x2,y2) => x1,y1: top left , x2,y2,: bottom right
+    for bbox in bboxes[1:]:
+        # x11 <= x22 and x12 >= x21 and y11 <= y22 and y12 >= y21
+        if (current_bbox[0] <= bbox[2] and current_bbox[2] >= bbox[0] and 
+                current_bbox[1] <= bbox[3] and current_bbox[3] >= bbox[1]):
+            current_bbox[0] = min(current_bbox[0], bbox[0])
+            current_bbox[1] = min(current_bbox[1], bbox[1])
+            current_bbox[2] = max(current_bbox[2], bbox[2])
+            current_bbox[3] = max(current_bbox[3], bbox[3])
+            # Continue the search until a separate bbox is found
+        else:
+            merged_bboxes.append(tuple(current_bbox)) # Add the merged bbox
+            current_bbox = list(bbox) # Shift the check to the next separate bbox
+
+    merged_bboxes.append(tuple(current_bbox)) # Add the merged bbox
+    
+    return merged_bboxes
+
+def processImageWithCV(base_dir: str,
+                       pdf_filename: str,
+                       page_number: int,
+                       page_image_PIL: Image.Image,
+                       contour_threshold: int | None = 400) -> list[Image.Image] :
+    import cv2
+    # Convert PIL to array (cv can only process arrays)
+    image: np.ndarray = np.array(page_image_PIL)
+    
+    # Convert to grayscale
+    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    _, thresh_image = cv2.threshold(gray_image, 200, 255, cv2.THRESH_BINARY_INV)
+    
+    # Find contours
+    contours, _ = cv2.findContours(thresh_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # Create a list to hold potential images
+    potential_image_contours: list = []
+    
+    for contour in contours:
+        area = cv2.contourArea(contour)
+        if area > contour_threshold:  # Minimum area threshold; adjust as needed
+            x, y, w, h = cv2.boundingRect(contour)
+            potential_image_contours.append((x, y, x + w, y + h))
+    
+    # If there are any potential images
+    cropped_images: list = []
+    if potential_image_contours: 
+        merged_bboxes: list[tuple] = mergeBBOXES(potential_image_contours)
+        
+        # Crop out images
+        for (x1, y1, x2, y2) in merged_bboxes:
+            # Extract the contour region from image array
+            cropped_image: np.ndarray = image[y1:y2, x1:x2]
+            cropped_images.append(Image.fromarray(cropped_image)) # Append to return list
+            
+            save_path = os.path.join(base_dir,"images",f"{pdf_filename}_{page_number}_image.jpg")
+            cv2.imwrite(save_path, cropped_image)
+    
+    return cropped_images   
+     
+def extractImage(page: pdfplumber.page.Page,
+                base_dir: str,
+                pdf_path:str,
+                llm_model: Contextualizer,
+                extracted_items: list[dict]) -> list[dict]:
+    # Get unique identifiers for the page
+    ###########################################
+    page_number: int = page.page_number
+    pdf_filename: str = os.path.splitext(os.path.basename(pdf_path))[0]
+    page_content_text: str = page.extract_text() # need it for contextualizing
+    
+    # Convert the whole page into a PIL image
+    ############################################
+    page_image: pdfplumber.display.PageImage = page.to_image() 
+    extracted_images: list[Image.Image] = processImageWithCV(base_dir,
+                                                             pdf_filename,
+                                                             page_number,
+                                                             page_image.original)
+    
+    # if extracted_images:
+    #     for image in extracted_images:
+    #         # Summarize and store in structured format
+    #         extracted_items.append({
+    #                     "uuid": str(uuid.uuid4()), 
+    #                     "text": llm_model.contextualizeDataWithLM(
+    #                         content_to_summarize=f"Page text:\n{page_content_text}\nImage:\n{image}"),
+    #                     "metadata":{
+    #                         "file": pdf_filename,
+    #                         "page": page_number,
+    #                         "type": "table",
+    #                         "original_content": image}
+    #                     })
+        
             
 def processPDF(base_dir: str,
                pdf_path:str,
