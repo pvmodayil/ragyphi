@@ -107,7 +107,7 @@ def extractTable(page: pdfplumber.page.Page,
         # Save table
         table_filename: str = os.path.join(base_dir,"tables",f"{pdf_filename}_{page_number}_table_{table_id}.csv")  
         saveData(path=os.path.join(base_dir,"tables",f"{pdf_filename}_{page_number}_context_{table_id}.md"), 
-                data=page_content_text)
+                data=extracted_items[-1]["text"])
         try:
             df.to_csv(table_filename,index=False)
         except OSError:
@@ -207,12 +207,12 @@ def extractImage(page: pdfplumber.page.Page,
             extracted_items.append({
                         "uuid": str(uuid.uuid4()), 
                         "text": vllm_model.contextualizeDataWithVLM(
-                            content_to_summarize=f"Page text:\n{page_content_text}\nImage:\n{image}"),
+                            text_content=page_content_text,image=image),
                         "metadata":{
                             "file": pdf_filename,
                             "page": page_number,
-                            "type": "table",
-                            "original_content": image}
+                            "type": "image",
+                            "original_content": }
                         })
 
     return extracted_items
