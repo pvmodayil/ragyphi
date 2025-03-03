@@ -186,7 +186,7 @@ def processImageWithCV(base_dir: str,
 def extractImage(page: pdfplumber.page.Page,
                 base_dir: str,
                 pdf_path:str,
-                llm_model: VLMContextualizer,
+                vllm_model: VLMContextualizer,
                 extracted_items: list[dict]) -> list[dict]:
     # Get unique identifiers for the page
     ###########################################
@@ -206,7 +206,7 @@ def extractImage(page: pdfplumber.page.Page,
             # Summarize and store in structured format
             extracted_items.append({
                         "uuid": str(uuid.uuid4()), 
-                        "text": llm_model.contextualizeDataWithVLM(
+                        "text": vllm_model.contextualizeDataWithVLM(
                             content_to_summarize=f"Page text:\n{page_content_text}\nImage:\n{image}"),
                         "metadata":{
                             "file": pdf_filename,
