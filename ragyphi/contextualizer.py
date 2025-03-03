@@ -58,10 +58,10 @@ class LMContextualizer:
         
         contextualizerPrompt: str = """ Carefully analyse the text or table data from the document and provide a detailed summary.\
         These summaries will be embedded and used to retrieve the raw text or table elements.\
-        Also generate hypothetical questions that can be answered based on the the given context.
+        Also generate hypothetical questions that can be answered based on the the given context.\
 
-        Document to be summarized:
-        {content_to_summarize}
+        Document to be summarized:\
+        {content_to_summarize}\
 
         Please structure your response in the following format:
         1. A concise summary of the table or text that is well optimized for retrieval.
@@ -76,12 +76,12 @@ class LMContextualizer:
         ).content
         
 class VLMContextualizer:
-    def __init__(self,local_llm: str) -> None:
+    def __init__(self,local_vllm: str) -> None:
         try:
-            self.llm: ChatOllama = ChatOllama(model=local_llm, temperature=0)
+            self.vllm: ChatOllama = ChatOllama(model=local_vllm, temperature=0)
         except Exception as e:
             if "404" in str(e):
-                raise ModelNotFoundError(local_llm)
+                raise ModelNotFoundError(local_vllm)
             else: 
                 print(f"Unexpected error occured: {e}")
                 import sys
@@ -94,7 +94,8 @@ class VLMContextualizer:
         
         return img_str
                 
-    def contextualizeDataWithVLM(self,content_to_summarize: str) -> str:
+    def contextualizeDataWithVLM(self,text_content: str,
+                                 image: Image.Image) -> str:
         """
         Takes in text to be summarised and summarises it.
         Parameters
@@ -111,15 +112,15 @@ class VLMContextualizer:
         """
         # Contextualize prompt
         ###############################################
-        contextualizerInstruction: str = """You are a helpful assistant capable of summarizing texts and tables for retrieval."""
+        contextualizerInstruction: str = """You are a helpful assistant capable of analyzing and summarizing images for retrieval."""
         
-        contextualizerPrompt: str = """ Carefully analyse the text or table data from the document and provide a detailed summary.\
-        These summaries will be embedded and used to retrieve the raw text or table elements.\
-        Also generate hypothetical questions that can be answered based on the the given context.
-
-        Document to be summarized:
-        {content_to_summarize}
-
+        contextualizerPrompt: str = """ Carefully analyse the image from the document and provide a detailed summary.\
+        These summaries will be embedded and used to retrieve the raw image and its inferences.\
+        Also generate hypothetical questions that can be answered based on the the given image.\
+        
+        Refer to this text which was found along with the image to help describe the image:\
+        {text_content}\
+            
         Please structure your response in the following format:
         1. A concise summary of the table or text that is well optimized for retrieval.
         2. List the key observations and relevant metrics.
@@ -127,7 +128,11 @@ class VLMContextualizer:
         4. A list of exactly 3 hypothetical questions that the above document could be used to answer.
         """
         
-        return self.llm.invoke(
+        image_b64: str = self.convertImageToBase64(image)
+        return self.vllm.invoke(
         [SystemMessage(content=contextualizerInstruction)]
-        + [HumanMessage(content=contextualizerPrompt.format(content_to_summarize=content_to_summarize))]
+        + [HumanMessage(content=contextualizerPrompt.format(text_content=text_content), additional_kwargs=
+                        {
+                            "image": image_b64
+                        })]
         ).content
