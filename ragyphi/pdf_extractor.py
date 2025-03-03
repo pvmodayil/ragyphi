@@ -195,7 +195,6 @@ def extractImage(page: pdfplumber.page.Page,
     page_content_text: str = page.extract_text() # need it for contextualizing
     
     # Convert the whole page into a PIL image
-    ############################################
     page_image: pdfplumber.display.PageImage = page.to_image() 
     extracted_images: list[Image.Image] = processImageWithCV(base_dir,
                                                              pdf_filename,
