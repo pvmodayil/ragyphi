@@ -13,7 +13,7 @@ from . import os, pd, np
 import gc
 
 # pdf
-from .contextualizer import Contextualizer
+from .contextualizer import LMContextualizer, VLMContextualizer
 import uuid
 import pdfplumber
 from PIL import Image
@@ -47,7 +47,7 @@ def saveData(path: str, data: str) -> None:
 def extractText(page: pdfplumber.page.Page,
                 base_dir: str,
                 pdf_path:str,
-                llm_model: Contextualizer,
+                llm_model: LMContextualizer,
                 extracted_items: list[dict]) -> list[dict]:
     # Get unique identifiers for the page
     ###########################################
@@ -77,7 +77,7 @@ def extractText(page: pdfplumber.page.Page,
 def extractTable(page: pdfplumber.page.Page,
                 base_dir: str,
                 pdf_path:str,
-                llm_model: Contextualizer,
+                llm_model: LMContextualizer,
                 extracted_items: list[dict]) -> list[dict]:
     # Get unique identifiers for the page
     ###########################################
@@ -186,7 +186,7 @@ def processImageWithCV(base_dir: str,
 def extractImage(page: pdfplumber.page.Page,
                 base_dir: str,
                 pdf_path:str,
-                llm_model: Contextualizer,
+                llm_model: VLMContextualizer,
                 extracted_items: list[dict]) -> list[dict]:
     # Get unique identifiers for the page
     ###########################################
@@ -200,26 +200,28 @@ def extractImage(page: pdfplumber.page.Page,
                                                              pdf_filename,
                                                              page_number,
                                                              page_image.original)
-    
-    # if extracted_images:
-    #     for image in extracted_images:
-    #         # Summarize and store in structured format
-    #         extracted_items.append({
-    #                     "uuid": str(uuid.uuid4()), 
-    #                     "text": llm_model.contextualizeDataWithLM(
-    #                         content_to_summarize=f"Page text:\n{page_content_text}\nImage:\n{image}"),
-    #                     "metadata":{
-    #                         "file": pdf_filename,
-    #                         "page": page_number,
-    #                         "type": "table",
-    #                         "original_content": image}
-    #                     })
-        
-            
+     
+    if extracted_images:
+        for image in extracted_images:
+            # Summarize and store in structured format
+            extracted_items.append({
+                        "uuid": str(uuid.uuid4()), 
+                        "text": llm_model.contextualizeDataWithVLM(
+                            content_to_summarize=f"Page text:\n{page_content_text}\nImage:\n{image}"),
+                        "metadata":{
+                            "file": pdf_filename,
+                            "page": page_number,
+                            "type": "table",
+                            "original_content": image}
+                        })
+
+    return extracted_items
+              
 def processPDF(base_dir: str,
                pdf_path:str,
                extracted_items: list[dict],
-               local_llm: str) -> list[dict]:
+               local_llm: str,
+               local_vllm: str) -> list[dict]:
     """
     Takes pdf file and extracts text, tables and images which are summarized along with context using LLM model.
     
@@ -249,11 +251,12 @@ def processPDF(base_dir: str,
     list[dict]
         extracted data 
     """
-    # Initialize the LLM model
-    llm_model = Contextualizer(local_llm=local_llm)      
-    
     with pdfplumber.open(pdf_path) as pdf: # Memory will be removed once exited
         for page in tqdm(pdf.pages, desc=f"Processing {pdf_path} pages"):
+            # Initialize the LLM model
+            ###########################################
+            llm_model = LMContextualizer(local_llm=local_llm)  
+            
             # Extract text and contextualize
             ###########################################
             extracted_items = extractText(page,base_dir,pdf_path,llm_model,extracted_items)
@@ -262,12 +265,20 @@ def processPDF(base_dir: str,
             #########################################
             extracted_items = extractTable(page,base_dir,pdf_path,llm_model,extracted_items)
             
+            # Initialize the Vision LLM model
+            ##########################################
+            del llm_model # delete the loaded llm model
+            vllm_model = VLMContextualizer(loacal_vllm=local_vllm)
+            
             # Extract images and contextualize
             #########################################
+            extracted_items = extractImage(page,base_dir,pdf_path,vllm_model,extracted_items)
+            
+            # Free memory
+            del vllm_model
     print(f"Texts and tables with context are extracted from file {pdf_path}")
     
-    # Free memory
-    del llm_model
+    
     gc.collect        
     
     return extracted_items
