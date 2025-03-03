@@ -177,9 +177,6 @@ def processImageWithCV(base_dir: str,
             # Extract the contour region from image array
             cropped_image: np.ndarray = image[y1:y2, x1:x2]
             cropped_images.append(Image.fromarray(cropped_image)) # Append to return list
-            
-            save_path = os.path.join(base_dir,"images",f"{pdf_filename}_{page_number}_image.jpg")
-            cv2.imwrite(save_path, cropped_image)
     
     return cropped_images   
      
@@ -202,7 +199,9 @@ def extractImage(page: pdfplumber.page.Page,
                                                              page_image.original)
      
     if extracted_images:
-        for image in extracted_images:
+        for img_id, image in enumerate(extracted_images):
+            img_save_path = os.path.join(base_dir,"images",f"{pdf_filename}_{page_number}_image_{img_id}.jpg")
+            image.save(img_save_path)
             # Summarize and store in structured format
             extracted_items.append({
                         "uuid": str(uuid.uuid4()), 
@@ -212,8 +211,10 @@ def extractImage(page: pdfplumber.page.Page,
                             "file": pdf_filename,
                             "page": page_number,
                             "type": "image",
-                            "original_content": }
+                            "original_content": img_save_path}
                         })
+            saveData(path=os.path.join(base_dir,"images",f"{pdf_filename}_{page_number}_context_{img_id}.md"), 
+                data=extracted_items[-1]["text"])
 
     return extracted_items
               
