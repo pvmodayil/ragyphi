@@ -246,6 +246,8 @@ def processPDF(base_dir: str,
         } 
     local_llm: str 
         Ollama chat model name
+    local_Vllm: str
+        Ollama vision model name
 
     Returns
     -------
