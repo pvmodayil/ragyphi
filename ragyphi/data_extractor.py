@@ -45,9 +45,10 @@ def create_directories(base_dir: str) -> None:
 ###########################################
 #        Document Processing: PDF
 ###########################################   
-def loadFilesndExtract(base_dir: str, 
+def loadFilesAndExtract(base_dir: str, 
                       extracted_items: list[dict], 
-                      local_llm: str) -> list[dict]:
+                      local_llm: str,
+                      local_vllm: str) -> list[dict]:
     """
     Load the file types within the given base_dir path and extract data from them
 
@@ -59,6 +60,8 @@ def loadFilesndExtract(base_dir: str,
         list to store the extracted data
     local_llm : str
         Ollama chat model name default value llama3.2-8b model
+    local_vllm : str
+        Ollama vision model name default value granite3.2-vision model
 
     Returns
     -------
@@ -70,7 +73,7 @@ def loadFilesndExtract(base_dir: str,
     for file in os.listdir(base_dir):
         if file.endswith('.pdf'):
             pdf_path: str = os.path.join(base_dir, file)
-            extracted_items = processPDF(base_dir,pdf_path,extracted_items,local_llm)      
+            extracted_items = processPDF(base_dir,pdf_path,extracted_items,local_llm,local_vllm)      
         
     return extracted_items   
 
@@ -177,7 +180,8 @@ def checkFolder(dir_path: str) -> None:
     if not files:
         raise Exception(f"The {dir_path} folder is empty. Please provide relevant documents for RAG")
 
-def processDocuments(local_llm: str = "llama3.2:3b-instruct-fp16") -> None:
+def processDocuments(local_llm: str = "llama3.2:3b-instruct-fp16",
+                     local_vllm: str = "granite3.2-vision") -> None:
     """
     Create a data folder and process the files within it.
 
@@ -206,7 +210,7 @@ def processDocuments(local_llm: str = "llama3.2:3b-instruct-fp16") -> None:
     # Extract information from pdf files
     ###########################################
     extracted_items: list = []
-    extracted_items = loadFilesndExtract(base_dir,extracted_items,local_llm)
+    extracted_items = loadFilesAndExtract(base_dir,extracted_items,local_llm,local_vllm)
     
     # Convert to dataframe
     ###########################################

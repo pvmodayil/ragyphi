@@ -232,7 +232,7 @@ def processPDF(base_dir: str,
         base directory path
     pdf_path : str
         path string to the pdf file being analyzed
-    extracted_items: list[dict]
+    extracted_items : list[dict]
         list of dictionaries with the below format
         {
          "uuid": unique id,
@@ -244,9 +244,9 @@ def processPDF(base_dir: str,
              "original_content": original content which was summarized
               }
         } 
-    local_llm: str 
+    local_llm : str 
         Ollama chat model name
-    local_Vllm: str
+    local_Vllm : str
         Ollama vision model name
 
     Returns
