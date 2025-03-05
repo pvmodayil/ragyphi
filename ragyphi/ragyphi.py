@@ -21,8 +21,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from dataclasses import dataclass
 
 # LLM
-from langchain_community.chat_models import ChatOllama
-from langchain_core.messages import HumanMessage
+import ollama
 # from ollama._types import ResponseError
 
 ############################
@@ -143,7 +142,7 @@ def retrieveContext(question: str,
 
 def rag(question: str,
         extracted_data: ExtractedData,
-        llm: ChatOllama,
+        llm: str,
         similarity_threshold: int = 3) -> LLMResponse:
     """
     RAG operation, takes in a question and reponds to it using extracted context
@@ -154,8 +153,8 @@ def rag(question: str,
         input question from user
     extracted_data : ExtractedData
         vector_store and extracted data
-    llm: ChatOllama
-        Ollama model
+    llm: str
+        Ollama model name
     similarity_threshold : int, optional
         threshold for max number of similar options, by default 3
 
@@ -165,26 +164,27 @@ def rag(question: str,
         response,context
     """
     # Prompt to the llm
-    rag_prompt: str = """You are a PCB designer assistant for providing required information. 
-
-    Here is the context to use to answer the question:
+    system_prompt: str = """You are a PCB designer assistant capable of answering questions \
+        based on relevant scientific information."""
+     
+    user_prompt: str = """
+    Here is the context to use to answer the question:\
 
     {context} 
 
 
-    Think carefully about the above context which may include tabular data. 
+    Think carefully about the above context which may include tabular data. \
 
-    Now, carefully review the user question given below and provide a clear answer:
+    Now, carefully review the user question given below and provide a clear answer:\
 
-    {question}
+    {question}\
 
     Please structure your response in the following format:
     Answer: Provide a concise answer to the question.
     Context: Explain the relevant context from the provided information.
     Questions: Suggest follow-up questions for clarification or further exploration.
 
-    If you don't know the answer, just say that you don't know, don't try to make up an answer.
-    Response:"""
+    If you don't know the answer, just say that you don't know, don't try to make up an answer."""
     
     # Retrieve context and generate response
     context: str = retrieveContext(question,extracted_data,similarity_threshold)
@@ -192,11 +192,13 @@ def rag(question: str,
         return LLMResponse(response="Sorry, I couldn't find any relevant information regarding this topic.\
                            \nPlease reframe your question and try again.",
                            context=context)
-    
-    rag_prompt_formatted: str = rag_prompt.format(context=context, question=question)
-    response: str = llm.invoke([HumanMessage(content=rag_prompt_formatted)]).content
-
-    return LLMResponse(response=response,context=context)
+        
+    response = ollama.chat(model=llm, messages=[
+            {'role': 'system', 'content': system_prompt},
+            {'role': 'user', 'content': user_prompt.format(context=context, question=question)}
+        ])
+        
+    return response['message']['content']
     
 if __name__ == "__main__":
     pass
