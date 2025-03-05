@@ -15,3 +15,7 @@ dependencies = [
     "pandas>=2.2.3",
     "pdfplumber>=0.11.5",
 ]
+[external]
+dependencies = [
+    "ollama>=0.5.13" 
+]
