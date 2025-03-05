@@ -21,7 +21,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from dataclasses import dataclass
 
 # LLM
-import ollama
+from .ollama_chat import Chatbot
 # from ollama._types import ResponseError
 
 ############################
@@ -142,7 +142,7 @@ def retrieveContext(question: str,
 
 def rag(question: str,
         extracted_data: ExtractedData,
-        llm: str,
+        llm: Chatbot,
         similarity_threshold: int = 3) -> LLMResponse:
     """
     RAG operation, takes in a question and reponds to it using extracted context
@@ -164,9 +164,6 @@ def rag(question: str,
         response,context
     """
     # Prompt to the llm
-    system_prompt: str = """You are a PCB designer assistant capable of answering questions \
-        based on relevant scientific information."""
-     
     user_prompt: str = """
     Here is the context to use to answer the question:\
 
@@ -192,13 +189,10 @@ def rag(question: str,
         return LLMResponse(response="Sorry, I couldn't find any relevant information regarding this topic.\
                            \nPlease reframe your question and try again.",
                            context=context)
-        
-    response = ollama.chat(model=llm, messages=[
-            {'role': 'system', 'content': system_prompt},
-            {'role': 'user', 'content': user_prompt.format(context=context, question=question)}
-        ])
-        
-    return response['message']['content']
+    
+    response =  llm.chat(user_prompt=user_prompt.format(context=context, question=question))    
+    
+    return LLMResponse(response=response, context=context)
     
 if __name__ == "__main__":
     pass
