@@ -5,6 +5,7 @@
 #################################################
 
 # LLM
+import ollama
 from langchain_community.chat_models import ChatOllama
 from langchain_core.messages import HumanMessage, SystemMessage
 
@@ -24,28 +25,24 @@ class ModelNotFoundError(Exception):
 #####################################################################################
 #                                    Classes
 #####################################################################################
-
 class LMContextualizer:
-    def __init__(self,local_llm: str) -> None:
-        try:
-            self.llm: ChatOllama = ChatOllama(model=local_llm, temperature=0)
-        except Exception as e:
-            if "404" in str(e):
-                raise ModelNotFoundError(local_llm)
-            else: 
-                print(f"Unexpected error occured: {e}")
-                import sys
-                sys.exit(1) # exit the program
-                
-    def contextualizeDataWithLM(self,content_to_summarize: str) -> str:
+    def __init__(self, local_llm: str) -> None:
+        # Test if the model exists
+        available_models = ollama.list()["models"]
+        
+        if not any(model["model"] == local_llm for model in available_models):
+            raise ModelNotFoundError(local_llm)
+        
+        # If exists initialize class
+        self.model = local_llm
+
+    def contextualizeDataWithLM(self, content_to_summarize: str) -> str:
         """
         Takes in text to be summarised and summarises it.
         Parameters
         ----------
         content_to_summarize : str
             text / table along with context that needs to be summarised 
-        llm: ChatOllama 
-            Ollama chat model default value llama3.2-8b model
 
         Returns
         -------
@@ -54,14 +51,16 @@ class LMContextualizer:
         """
         # Contextualize prompt
         ###############################################
-        contextualizerInstruction: str = """You are a helpful assistant capable of summarizing texts and tables for retrieval."""
+        contextualizerInstruction = """You are a helpful assistant capable of summarizing texts and tables for retrieval."""
         
-        contextualizerPrompt: str = """ Carefully analyse the text or table data from the document and provide a detailed summary.\
-        These summaries will be embedded and used to retrieve the raw text or table elements.\
-        Also generate hypothetical questions that can be answered based on the the given context.\
+        contextualizerPrompt = f"""{contextualizerInstruction}
 
-        Document to be summarized:\
-        {content_to_summarize}\
+        Carefully analyse the text or table data from the document and provide a detailed summary.
+        These summaries will be embedded and used to retrieve the raw text or table elements.
+        Also generate hypothetical questions that can be answered based on the given context.
+
+        Document to be summarized:
+        {content_to_summarize}
 
         Please structure your response in the following format:
         1. A concise summary of the table or text that is well optimized for retrieval.
@@ -70,10 +69,12 @@ class LMContextualizer:
         4. A list of exactly 3 hypothetical questions that the above document could be used to answer.
         """
         
-        return self.llm.invoke(
-        [SystemMessage(content=contextualizerInstruction)]
-        + [HumanMessage(content=contextualizerPrompt.format(content_to_summarize=content_to_summarize))]
-        ).content
+        response = ollama.chat(model=self.model, messages=[
+            {'role': 'system', 'content': contextualizerInstruction},
+            {'role': 'user', 'content': contextualizerPrompt}
+        ])
+        
+        return response['message']['content']
         
 class VLMContextualizer:
     def __init__(self,local_vllm: str) -> None:
