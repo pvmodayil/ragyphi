@@ -205,8 +205,7 @@ def extractImage(page: pdfplumber.page.Page,
             # Summarize and store in structured format
             extracted_items.append({
                         "uuid": str(uuid.uuid4()), 
-                        "text": vllm_model.contextualizeDataWithVLM(
-                            text_content=page_content_text,image=image),
+                        "text": vllm_model.contextualizeDataWithVLM(additional_text=page_content_text,image=image),
                         "metadata":{
                             "file": pdf_filename,
                             "page": page_number,

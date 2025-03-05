@@ -181,7 +181,7 @@ def checkFolder(dir_path: str) -> None:
         raise Exception(f"The {dir_path} folder is empty. Please provide relevant documents for RAG")
 
 def processDocuments(local_llm: str = "llama3.2:3b-instruct-fp16",
-                     local_vllm: str = "granite3.2-vision") -> None:
+                     local_vllm: str = "granite3.2-vision:latest") -> None:
     """
     Create a data folder and process the files within it.
 
