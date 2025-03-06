@@ -16,26 +16,30 @@ To get started with `ragyphi`, follow these steps:
    git clone https://github.com/pvmodayil/ragyphi.git
    cd ragyphi
    ```
-2. **Create a virtual environment (optional but recommended):**
+2. **Create a virtual environment with uv:**
    ```bash
-   conda env create -f environment.yml  # Create an environment named 'RAG'
-   conda activate RAG  # Activate the newly created environment
+   uv sync  # Will create the virtual environment and install the required dependecies
+   source .venv/bin/activate  # On Unix-based systems
+   # or
+   .venv\Scripts\activate  # On Windows
    ```
 3. **Install Ollama**
-   : Make sure you have Ollama installed on your system [Ollama download](https://ollama.com/download). Then, run the following command in your terminal
+   : Make sure you have Ollama >= 0.5.13 installed on your system [Ollama download](https://ollama.com/download). Then, run the following command in your terminal
    ```bash
    ollama pull llama3.2:3b-instruct-fp16
+   ollama pull granite3.2-vision
    ```
 ## Usage
 Create a directory 'data' with the pdf files for RAG usage and run the following code.
 ```python
   # Import necessary libraries
   from ragyphi import ragyphi as rp
-  from langchain_community.chat_models import ChatOllama
+  from ragyphi.ollama_chat import Chatbot
   
   # Initialize the local language model (LLM)
-  local_llm = "llama3.2:3b-instruct-fp16"
-  llm = ChatOllama(model=local_llm, temperature=0)
+  local_llm = "llama3.2:3b-instruct-fp16" # If you like to use other models pull them with ollama pull first
+  system_prompt = "You are a helpful assistant capable of answering scientific questions."
+  llm = Chatbot(local_llm=local_llm, system_prompt=system_prompt)
   
   # Load data for processing
   data = rp.loadData()
