@@ -10,7 +10,7 @@
 import cv2
 from ultralytics import YOLO
 from PIL import Image
-import numpy as np
+from . import os, np
 
 def pre_process_image(page_image: Image.Image) -> np.ndarray:
     YOLO_INPUT_SIZE: int = 640
@@ -47,7 +47,8 @@ def get_images(page_image: Image.Image) -> list[Image.Image]:
     image: np.ndarray = pre_process_image(page_image)
     
     # Load and predict with YOLO
-    model = YOLO("yolo_model.pt")
+    model_path: str = os.path.join("weights","yolo_model.pt")
+    model = YOLO(model_path)
     results = model(image)
     
     # Extract bounding boxes and class IDs from the results
