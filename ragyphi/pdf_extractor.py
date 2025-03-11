@@ -9,7 +9,7 @@
 #                                     Imports
 #####################################################################################
 # global imports
-from . import os, pd, np
+from . import os, pd
 import gc
 
 # pdf
