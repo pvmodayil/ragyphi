@@ -21,7 +21,7 @@ To get started with `ragyphi`, follow these steps:
    pip install uv # Install uv
    uv --version # Verify uv installation
 
-   uv venv --python 3.11 # Create venv
+   uv venv --python 3.12 # Create venv
 
    source .venv/bin/activate  # On Unix-based systems
    # or
