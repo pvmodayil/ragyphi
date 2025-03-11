@@ -12,12 +12,7 @@ from io import BytesIO
 from PIL import Image
 
 # Typing
-from typing import TypedDict
-from typing_extensions import NotRequired
-class OllamaMessage(TypedDict):
-    role: str
-    content: str
-    images: NotRequired[list[bytes]] # Optional element
+from _types import OllamaMessage
     
 ############################
 # Custom Exception

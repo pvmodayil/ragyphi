@@ -6,8 +6,7 @@
 #################################################
 """
 To Do: 
-    Add multi document processing capabilities
-    Add Image processing capabilities
+    Add multi document type processing capabilities
 """
 #####################################################################################
 #                                     Imports
