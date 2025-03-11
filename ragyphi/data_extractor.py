@@ -40,7 +40,7 @@ def create_directories(base_dir: str) -> None:
     None
         return nothing, creates the directories
     """
-    directories: list = ["images", "text","tables"]
+    directories: list[str] = ["images", "text","tables"]
     for dir in directories:
         os.makedirs(os.path.join(base_dir, dir), exist_ok=True)
         
@@ -48,7 +48,7 @@ def create_directories(base_dir: str) -> None:
 #        Document Processing: PDF
 ###########################################   
 def loadFilesAndExtract(base_dir: str, 
-                      extracted_items: list[dict], 
+                      extracted_items: list[ExtractedItems], 
                       local_llm: str,
                       local_vllm: str) -> list[ExtractedItems]:
     """
@@ -75,11 +75,15 @@ def loadFilesAndExtract(base_dir: str,
     for file in os.listdir(base_dir):
         if file.endswith('.pdf'):
             pdf_path: str = os.path.join(base_dir, file)
-            extracted_items: list[ExtractedItems] = processPDF(base_dir,pdf_path,extracted_items,local_llm,local_vllm)      
+            extracted_items = processPDF(base_dir=base_dir,
+                                         pdf_path=pdf_path,
+                                         extracted_items=extracted_items,
+                                         local_llm=local_llm,
+                                         local_vllm=local_vllm)      
         
     return extracted_items   
 
-def convertExtractedItemsToDF(extracted_items: list[dict]) -> pd.DataFrame:
+def convertExtractedItemsToDF(extracted_items: list[ExtractedItems]) -> pd.DataFrame:
     """
     Convert the extracted_items list of dictionaries to pandas dataframe
 
@@ -147,9 +151,11 @@ def indexAndStore(extracted_data_df: pd.DataFrame) -> None:
     print("Storing vectors and metadata..........")
     try:
         # Convert the embeddings(array) to an array of arrays
-        all_embeddings: np.ndarray = np.array(extracted_data_df['embedding'].tolist(), dtype='object')
+        all_embeddings: np.ndarray = np.array(extracted_data_df['embedding'].tolist(), dtype=np.float32)
     except KeyError:
         raise Exception("Did not find the column 'embedding' in the extracted_data dataframe.")
+    except ValueError:
+        raise Exception("Failed to convert embeddings to a 2D numpy array. Check if all embeddings have the same dimension.")
     
     # Define the dimension of your embedding vectors
     embedding_vector_dimension: int = all_embeddings.shape[1]
@@ -160,12 +166,18 @@ def indexAndStore(extracted_data_df: pd.DataFrame) -> None:
     # Clear any pre-existing index
     index.reset()
 
+    # Verify the array properties
+    assert isinstance(all_embeddings, np.ndarray), f"all_embeddings must be a numpy array, got type: {type(all_embeddings)}"
+    assert all_embeddings.ndim == 2, f"all_embeddings must be a 2D array, got dimension: {all_embeddings.ndim}"
+    assert all_embeddings.size > 0, "all_embeddings must not be empty."
+    assert all_embeddings.dtype == np.float32, f"Expected dtype np.float32, but got {all_embeddings.dtype}"
+    
     # Add embeddings to the index
-    index.add(np.array(all_embeddings, dtype=np.float32))
+    index.add(np.array(all_embeddings, dtype=np.float32)) # type: ignore => FAISS not type check ready https://github.com/facebookresearch/faiss/issues/2891
     
     # Create vector store directory
     os.makedirs("vector_store",exist_ok=True)
-    vector_store_filename = os.path.join(os.getcwd(),"vector_store",'faiss_index.index')
+    vector_store_filename: str = os.path.join(os.getcwd(),"vector_store",'faiss_index.index')
 
     # Save the vector embeddings
     faiss.write_index(index, vector_store_filename)
@@ -176,8 +188,8 @@ def indexAndStore(extracted_data_df: pd.DataFrame) -> None:
                                  compression='snappy')
 
 def checkFolder(dir_path: str) -> None:
-    dir_contents = os.listdir(dir_path)
-    files = [file for file in dir_contents if os.path.isfile(os.path.join(dir_path,file))]
+    dir_contents: list[str] = os.listdir(dir_path)
+    files: list[str] = [file for file in dir_contents if os.path.isfile(os.path.join(dir_path,file))]
     
     if not files:
         raise Exception(f"The {dir_path} folder is empty. Please provide relevant documents for RAG")
@@ -191,6 +203,8 @@ def processDocuments(local_llm: str = "llama3.2:3b-instruct-fp16",
     ----------
     local_llm : str, optional
         name of llm model, by default "llama3.2:3b-instruct-fp16"
+    local_vllm : str, optional
+        name of vllm model, by default "granite3.2-vision:latest"
         
     Raises
     ------
@@ -211,8 +225,11 @@ def processDocuments(local_llm: str = "llama3.2:3b-instruct-fp16",
      
     # Extract information from pdf files
     ###########################################
-    extracted_items: list = []
-    extracted_items = loadFilesAndExtract(base_dir,extracted_items,local_llm,local_vllm)
+    extracted_items: list[ExtractedItems] = []
+    extracted_items = loadFilesAndExtract(base_dir=base_dir,
+                                          extracted_items=extracted_items,
+                                          local_llm=local_llm,
+                                          local_vllm=local_vllm)
     
     # Convert to dataframe
     ###########################################
