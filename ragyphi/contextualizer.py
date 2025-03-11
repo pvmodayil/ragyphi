@@ -77,15 +77,15 @@ class LMContextualizer:
         return response['message']['content']
 
 class VLMContextualizer:
-    def __init__(self, local_llm: str = "granite3.2-vision:latest") -> None:
+    def __init__(self, local_vllm: str = "granite3.2-vision:latest") -> None:
         # Test if the model exists
         available_models: list[dict[str,str]] = ollama.list()["models"]
         
-        if not any(model["model"] == local_llm for model in available_models):
-            raise ModelNotFoundError(local_llm)
+        if not any(model["model"] == local_vllm for model in available_models):
+            raise ModelNotFoundError(local_vllm)
         
         # If exists initialize class
-        self.model: str = local_llm
+        self.model: str = local_vllm
 
     @staticmethod
     def _get_image_bytes(image: Image.Image) -> bytes:

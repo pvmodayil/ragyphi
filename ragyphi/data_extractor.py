@@ -19,6 +19,9 @@ import faiss
 
 # Text extraction
 from langchain_huggingface import HuggingFaceEmbeddings
+
+# Typing
+from _types import ExtractedItems
         
 #####################################################################################
 #                                    Functions
@@ -47,7 +50,7 @@ def create_directories(base_dir: str) -> None:
 def loadFilesAndExtract(base_dir: str, 
                       extracted_items: list[dict], 
                       local_llm: str,
-                      local_vllm: str) -> list[dict]:
+                      local_vllm: str) -> list[ExtractedItems]:
     """
     Load the file types within the given base_dir path and extract data from them
 
@@ -55,7 +58,7 @@ def loadFilesAndExtract(base_dir: str,
     ----------
     base_dir : str
         base directory path
-    extracted_items : list[dict]
+    extracted_items : list[ExtractedItems]
         list to store the extracted data
     local_llm : str
         Ollama chat model name default value llama3.2-8b model
@@ -64,7 +67,7 @@ def loadFilesAndExtract(base_dir: str,
 
     Returns
     -------
-    list[dict]
+    list[ExtractedItems]
         extracted data
     """
     from .pdf_extractor import processPDF
@@ -72,7 +75,7 @@ def loadFilesAndExtract(base_dir: str,
     for file in os.listdir(base_dir):
         if file.endswith('.pdf'):
             pdf_path: str = os.path.join(base_dir, file)
-            extracted_items = processPDF(base_dir,pdf_path,extracted_items,local_llm,local_vllm)      
+            extracted_items: list[ExtractedItems] = processPDF(base_dir,pdf_path,extracted_items,local_llm,local_vllm)      
         
     return extracted_items   
 
