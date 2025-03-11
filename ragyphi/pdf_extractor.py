@@ -19,6 +19,9 @@ import pdfplumber
 from PIL import Image
 from tqdm import tqdm
 
+# own files
+import image_extractor
+
 #####################################################################################
 #                                    Functions
 #####################################################################################
@@ -193,10 +196,8 @@ def extractImage(page: pdfplumber.page.Page,
     
     # Convert the whole page into a PIL image
     page_image: pdfplumber.display.PageImage = page.to_image() 
-    extracted_images: list[Image.Image] = processImageWithCV(base_dir,
-                                                             pdf_filename,
-                                                             page_number,
-                                                             page_image.original)
+    # Get the cropped images from YOLO extractor
+    extracted_images: list[Image.Image] = image_extractor.get_images(page_image=page_image) 
      
     if extracted_images:
         for img_id, image in enumerate(extracted_images):
