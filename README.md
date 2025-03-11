@@ -18,10 +18,16 @@ To get started with `ragyphi`, follow these steps:
    ```
 2. **Create a virtual environment with uv:**
    ```bash
-   uv sync  # Will create the virtual environment and install the required dependecies
+   pip install uv # Install uv
+   uv --version # Verify uv installation
+
+   uv venv --python 3.11 # Create venv
+
    source .venv/bin/activate  # On Unix-based systems
    # or
    .venv\Scripts\activate  # On Windows
+
+   uv pip install -r pyproject.toml # Install dependencies
    ```
 3. **Install Ollama**
    : Make sure you have Ollama >= 0.5.13 installed on your system [Ollama download](https://ollama.com/download). Then, run the following command in your terminal
@@ -30,7 +36,7 @@ To get started with `ragyphi`, follow these steps:
    ollama pull granite3.2-vision
    ```
 ## Usage
-Create a directory 'data' with the pdf files for RAG usage and run the following code.
+Create a directory 'data' with the pdf files for RAG usage and run the following code in a new python file.
 ```python
   # Import necessary libraries
   from ragyphi import ragyphi as rp
