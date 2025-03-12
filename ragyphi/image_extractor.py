@@ -8,6 +8,7 @@
 #                                     Imports
 #####################################################################################
 from ultralytics import YOLO
+from pathlib import Path
 from PIL import Image
 from . import os, np
 
@@ -41,7 +42,8 @@ def get_images(page_image: Image.Image) -> list[Image.Image]:
     
     # Load and predict with YOLO
     model_path: str = os.path.join("weights","yolo_model.pt")
-    model = YOLO(model_path)
+    relative_model_path: Path  = Path(model_path).resolve()
+    model = YOLO(relative_model_path.as_posix()) # Input the complete path string
     results: list = model(image)
     
     # Extract bounding boxes and class IDs from the results
