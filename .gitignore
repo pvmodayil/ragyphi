@@ -1,0 +1,16 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Testing notebook
+test.ipynb
+
+# Data folder
+data/
+
+# Virtual environments
+.venv
