@@ -1,6 +1,6 @@
 # ragyphi
 An entire RAG (Retrieval-Augmented Generation) pipeline library designed to streamline the integration of language models with retrieval systems.
-ragyphi can extract text and table data from your pdf files and uses clever llm-based summarization techniques to augment the extracted data for efficient retrieval. 
+ragyphi can extract text, table, and image data from your pdf files and uses clever llm-based summarization techniques to augment the extracted data for efficient retrieval. 
 
 ## Table of Contents
 - [Installation](#installation)
