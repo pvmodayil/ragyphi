@@ -12,7 +12,7 @@ from io import BytesIO
 from PIL import Image
 
 # Typing
-from _types import OllamaMessage
+from ._types import OllamaMessage
     
 ############################
 # Custom Exception
