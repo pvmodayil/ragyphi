@@ -29,7 +29,7 @@ from .ollama_chat import Chatbot
 ############################
 class ModelNotFoundError(Exception):
     """Custom exception to handle cases where the specified model cannot be found."""
-    def __init__(self, model_name):
+    def __init__(self, model_name: str) -> None:
         super().__init__(f"Model '{model_name}' not found. Please pull it first using 'ollama pull {model_name}'.")
 
 
@@ -38,7 +38,7 @@ class ModelNotFoundError(Exception):
 ############################
 @dataclass(frozen=True)
 class ExtractedData:
-    index: faiss.swigfaiss_avx2.IndexFlatL2
+    index: faiss.IndexFlatL2
     raw_data: pd.DataFrame
 
 @dataclass(frozen=True)
@@ -116,27 +116,30 @@ def retrieveContext(question: str,
     
     # Embed the input question
     embedding_model: HuggingFaceEmbeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-    query_embedding: list = embedding_model.embed_query(question)
-    query_embedding: np.ndarray = np.array(query_embedding).reshape(1, -1)
+    query_embedding_list: list[float] = embedding_model.embed_query(question)
+    query_embedding: np.ndarray = np.array(query_embedding_list).reshape(1, -1)
     
     # Perform the search
-    distances, indices = loaded_index.search(query_embedding, similarity_threshold)
+    _distances: np.ndarray  # declare
+    indices: np.ndarray  
+    _distances, indices = loaded_index.search(query_embedding, k=similarity_threshold) # type:ignore
     indices = indices.flatten()
     
     # Extract relevant data
+    relevant_context_data: pd.DataFrame = pd.DataFrame() # Initialize to avoid Unbound Error
     try:
-       relevant_context_data: pd.DataFrame = loaded_data.loc[indices]
+       relevant_context_data = loaded_data.loc[indices]
     except Exception as e:
         if "[-1]" in str(e):
-            return "No Relevant context was found" # maybe add web search here later
+            return "No Relevant context was found" # Maybe add web search here later
 
     # Relevant context string in a structured format
-    relevant_context_objects: list[str] = relevant_context_data.apply(
+    relevant_context_objects: pd.Series[str] = relevant_context_data.apply(
     lambda row: f"Relevant context was found in file: {row['metadata']['file']}, page: {row['metadata']['page']}\n\n{row['text']}\n" + 
                  (f"\nTable metnioned in above summary:\n\n{row['metadata']['original_content']}\n" if row['metadata']['type'] == "table" else ""),
     axis=1)
     
-    relevant_context: str = "\n".join(relevant_context_objects) # above line creates a pd.Series object convert it into string
+    relevant_context: str = "\n".join(relevant_context_objects) # Above line creates a pd.Series object convert it into string
     
     return relevant_context
 
@@ -190,7 +193,7 @@ def rag(question: str,
                            \nPlease reframe your question and try again.",
                            context=context)
     
-    response =  llm.chat(user_prompt=user_prompt.format(context=context, question=question))    
+    response: str =  llm.chat(user_prompt=user_prompt.format(context=context, question=question))    
     
     return LLMResponse(response=response, context=context)
     
