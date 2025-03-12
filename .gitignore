@@ -11,3 +11,6 @@ test.ipynb
 
 # Virtual environments
 .venv
+
+# Data folder
+data/
