@@ -9,7 +9,7 @@
 #                                     Imports
 #####################################################################################
 # global imports
-from . import os, pd
+from . import os, pd, np
 import gc
 
 # pdf
@@ -162,7 +162,9 @@ def extractImage(page: pdfplumber.page.Page, # type: ignore
     page_content_text: str = page.extract_text() # need it for contextualizing
     
     # Convert the whole page into a PIL image
-    page_image: pdfplumber.display.PageImage = page.to_image() # type: ignore
+    page_image: Image.Image = (page.to_image()).original # Get the original image otherwise the output is of type pdfplumber.display.PageImage
+    assert isinstance(page_image, Image.Image), "page_image is not a PIL Image object"
+    
     # Get the cropped images from YOLO extractor
     extracted_images: list[Image.Image] = image_extractor.get_images(page_image=page_image) 
      

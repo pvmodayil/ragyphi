@@ -1,0 +1,70 @@
+AI-based Hybrid Approach (RL/GA) used for
+Calculating the Characteristic Parameters of a
+Single Surface Microstrip Transmission Line
+Werner John Emre Ecik Philip Varghese Modayil Julian Withöft
+PYRAMIDE2525 Information Processing Lab Information Processing Lab Information Processing Lab
+TU Dortmund TU Dortmund TU Dortmund TU Dortmund
+Paderborn - Germany Dortmund - Germany Dortmund - Germany Dortmund - Germany
+werner.john@pyramide2525.de emre.ecik@tu-dortmund.de philip.modayil@tu-dortmund.de julian.withoeft@tu-dortmund.de
+Nima Ghafarian Shoaee Ralf Brüning Jürgen Götze
+Information Processing Lab EMC Technology Center Paderborn Information Processing Lab
+TU Dortmund Zuken GmbH TU Dortmund
+Dortmund - Germany Paderborn - Germany Dortmund – Germany
+nima.ghafarian@tu-dortmund.de ralf.bruening@de.zuken.com juergen.goetze@uni-dortmund.de
+Abstract— This article presents an approach for a hybrid AI The solution of the Laplace equation associated with the Q-
+method (for predicting the characteristic parameters of line TEM case addressed here is described by a Fourier series
+networks on PCBs using a simple example (single surface approach [1]. The unknown series coefficients are determined
+microstrip structure -outer layer). This article is part of the
+using first-order spline functions to describe the potential at
+current developments in the field of Physically Based AI
+the boundary layer between two dielectrics and to minimize
+Methods for EDA Applications. The contribution presented
+the electrostatic energy W’e in the region under consideration
+here must be understood as a proof of concept and serves to
+[2]. Thomson's theorem [3] is used for this purpose.
+better understand the application of a hybrid algorithm (ML-
+Assisted GA: DDRL + GA) for the purpose of shape The new approach for the implementation of deep
+optimization in the solution of physics-based problems with the reinforcement learning (degenerate deep reinforcement
+application to a simple problem (field problem for Q-TEM
+learning (single-step DRL)) presented in [4] is used here to
+structures; single surface microstrip). To determine the
+find the required shape of the potential function respectively
+characteristic parameters for the Q-TEM case, the shape of
+the electrostatic energy W’e and its corresponding
+potential curve describing the solution of the corresponding
+field problem is determined using Thomson's theorem (energy characteristic transmission line parameters.
+minimum of the microstrip arrangement under consideration). DRL helps achieve a near-global solution initially, which is
+Keywords— Physical-driven scientific computing; physically further optimized using a Genetic Algorithm (GA) [5]. A
+based AI methods; machine learning; predictive modelling; single bezier curve-based shape drawing technique (calculation of a
+surface microstrip; degenerate deep reinforcement learning; near-global optimum potential curve) is used for the DRL
+genetic algorithms; signal integrity; computational
+approach (scaled reward system).
+electromagnetics; EDA applications.
+The metric behaviour (critical/actor loss/entropy
+I. INTRODUCTION
+coefficient/reward) of the implemented DDRL as a function
+To calculate the characteristic parameters of transmission of training time will be discussed. The physical results
+lines on a PCB, the structure to be considered must first be obtained (potential curve (shape) + energy + surface charge
+physically described and the necessary physical knowledge density and the resulting transmission line parameters) are
+regarding AI modelling must be prepared. The following compared with results from the literature [5] [10].
+planar structure according to Figure 1 is used as a model.
+II. PHYSICAL MODELLING OF THE PROBLEM (PHYSICAL
+PRECONDITIONS FOR SOLVING THE GIVEN FIELD PROBLEM)
+The following system-describing equation (Laplace
+equation) can then be solved for the single microstrip
+arrangement shown in Figure 1:
+V (x, y) = 0. (1)
+To calculate the required line parameters Z and ϵ , the
+△ D eff
+length-related capacity parameters (plane problem) C‘ (and
+D
+C‘ must be determined; two separate calculation steps are
+L
+therefore necessary. The following equations apply:
+(2a)
+Fig. 1. Physical model for a plane symmetrical single surface microstrip
+structure
+First, a boundary value problem must be defined in which the
+electric potential (Q-TEM) on the conductive surface and the
+conductive boundary of the structure is predetermined, but ; (2b)
+unknown on the charge-free surface.
