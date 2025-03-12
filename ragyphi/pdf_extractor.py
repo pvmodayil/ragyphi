@@ -20,7 +20,7 @@ from PIL import Image
 from tqdm import tqdm
 
 # own files
-import image_extractor
+from . import image_extractor
 
 # Typing
 from ._types import ExtractedItems
