@@ -23,7 +23,7 @@ from tqdm import tqdm
 import image_extractor
 
 # Typing
-from _types import ExtractedItems
+from ._types import ExtractedItems
 
 #####################################################################################
 #                                    Functions

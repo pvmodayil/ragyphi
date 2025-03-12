@@ -21,7 +21,7 @@ import faiss
 from langchain_huggingface import HuggingFaceEmbeddings
 
 # Typing
-from _types import ExtractedItems
+from ._types import ExtractedItems
         
 #####################################################################################
 #                                    Functions
