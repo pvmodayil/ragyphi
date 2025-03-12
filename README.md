@@ -42,17 +42,17 @@ Create a directory 'data' with the pdf files for RAG usage and run the following
   from ragyphi import ragyphi as rp
   from ragyphi.ollama_chat import Chatbot
   
-  # Initialize the local language model (LLM)
-  local_llm = "llama3.2:3b-instruct-fp16" # If you like to use other models pull them with ollama pull first
-  system_prompt = "You are a helpful assistant capable of answering scientific questions."
-  llm = Chatbot(local_llm=local_llm, system_prompt=system_prompt)
-  
   # Load data for processing
-  data = rp.loadData()
+  data: rp.ExtractedData = rp.loadData()
+
+  # Initialize the local language model (LLM)
+  local_llm: str = "llama3.2:3b-instruct-fp16" # If you like to use other models pull them with ollama pull first
+  system_prompt: str = "You are a helpful assistant capable of answering scientific questions."
+  llm: Chatbot = Chatbot(local_llm=local_llm, system_prompt=system_prompt)
   
   # Define your question and retrieve response using RAG pipeline
-  question = "your-question-here"
-  result = rp.rag(question, data, llm)
+  question: str = "your-question-here"
+  result: rp.LLMResponse = rp.rag(question, data, llm)
   
   # Print the result and context for review
   print("Response:", result.response)
