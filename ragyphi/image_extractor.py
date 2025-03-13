@@ -11,33 +11,49 @@ from ultralytics import YOLO
 from PIL import Image
 from . import os, np
 
-def pre_process_image(page_image: Image.Image) -> np.ndarray:
+def pre_process_image(page_image: Image.Image) -> Image.Image:
     YOLO_INPUT_SIZE: int = 640
     
     # Resize the image to 640x640 pixels
     resized_image: Image.Image = page_image.resize((YOLO_INPUT_SIZE,YOLO_INPUT_SIZE), Image.Resampling.LANCZOS)
     
-    # Convert PIL to array (cv can only process arrays)
-    image_array: np.ndarray = np.array(resized_image)
-    
-    return image_array
+    return resized_image
 
 # Function to crop bounding boxes from the image
-def crop_bounding_boxes(image: np.ndarray, 
+def crop_bounding_boxes(original_image: Image.Image, 
                         boxes: np.ndarray, 
                         class_ids: np.ndarray, 
                         target_class: int =0) -> list[Image.Image]:
+    # resized image resolution
+    YOLO_INPUT_SIZE: int = 640
+    original_width: int = original_image.size[0]
+    original_height: int = original_image.size[1]
+    
     cropped_images: list = []
     for box, class_id in zip(boxes, class_ids):
         if class_id == target_class:  # Check if the class matches the target class
-            x_min, y_min, x_max, y_max = map(int, box)  # Convert coordinates to integers
-            cropped_image: np.ndarray = image[y_min:y_max, x_min:x_max]  # Crop the region
-            cropped_images.append(Image.fromarray(cropped_image))
+            # Convert coordinates to integers
+            x_min, y_min, x_max, y_max = map(int, box)  
+            
+            # Calculate the scaling factor
+            scale_x: float = original_width / YOLO_INPUT_SIZE
+            scale_y: float = original_height / YOLO_INPUT_SIZE
+            
+            # Apply the scaling factor to the bounding box coordinates
+            x_min_scaled = int(x_min * scale_x)
+            y_min_scaled = int(y_min * scale_y)
+            x_max_scaled = int(x_max * scale_x)
+            y_max_scaled = int(y_max * scale_y)
+            
+            # Crop the region from the original image
+            cropped_image: Image.Image = original_image.crop((x_min_scaled, y_min_scaled, x_max_scaled, y_max_scaled))
+            cropped_images.append(cropped_image)
+    
     return cropped_images
 
 def get_images(page_image: Image.Image) -> list[Image.Image]:
     # Resize the image to YOLO standard (640,640)
-    image: np.ndarray = pre_process_image(page_image)
+    image: Image.Image = pre_process_image(page_image)
     
     # Load and predict with YOLO
     model_path: str = os.path.join(os.getcwd(),"ragyphi","weights","yolo_model.pt") # Edit later for package suitable paths
@@ -49,6 +65,6 @@ def get_images(page_image: Image.Image) -> list[Image.Image]:
     class_ids: np.ndarray = results[0].boxes.cls.cpu().numpy().astype(int)  # Class IDs
 
     # Crop only the diagrams
-    cropped_images: list[Image.Image] = crop_bounding_boxes(image, boxes, class_ids, target_class=0)
+    cropped_images: list[Image.Image] = crop_bounding_boxes(page_image, boxes, class_ids, target_class=0)
     
     return cropped_images

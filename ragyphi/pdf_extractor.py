@@ -162,7 +162,7 @@ def extractImage(page: pdfplumber.page.Page, # type: ignore
     page_content_text: str = page.extract_text() # need it for contextualizing
     
     # Convert the whole page into a PIL image
-    page_image: Image.Image = (page.to_image()).original # Get the original image otherwise the output is of type pdfplumber.display.PageImage
+    page_image: Image.Image = (page.to_image(resolution = 1200)).original # Get the original image otherwise the output is of type pdfplumber.display.PageImage
     assert isinstance(page_image, Image.Image), "page_image is not a PIL Image object"
     
     # Get the cropped images from YOLO extractor
