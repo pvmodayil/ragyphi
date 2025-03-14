@@ -21,7 +21,7 @@ class ModelNotFoundError(Exception):
     def __init__(self, model_name: str) -> None:
         super().__init__(f"Model '{model_name}' not found. Please pull it first using 'ollama pull {model_name}'.")
 class Chatbot:
-    def __init__(self,local_llm: str) -> None:
+    def __init__(self,local_llm: str, system_prompt: str = getSystemPrompt(key="QA")) -> None:
         # Test if the model exists
         available_models: list[ollama._types.ListResponse.Model] = ollama.list()["models"] #type:ignore
         
@@ -32,7 +32,7 @@ class Chatbot:
         self.llm_model: str = local_llm
         
         # List to store the context
-        self.chat_history: list[dict[str,str]] = [{'role': 'system', 'content': getSystemPrompt(key="QA")}]
+        self.chat_history: list[dict[str,str]] = [{'role': 'system', 'content': system_prompt}]
         
         # Context length
         self.context_length: int = 100

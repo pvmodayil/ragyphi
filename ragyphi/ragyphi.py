@@ -24,6 +24,9 @@ from dataclasses import dataclass
 from .ollama_chat import Chatbot
 # from ollama._types import ResponseError
 
+# Prompt
+from ._prompt_template import getContextualizerPrompt, getSystemPrompt
+
 ############################
 # Custom Exception
 ############################
