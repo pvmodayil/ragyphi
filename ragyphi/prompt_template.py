@@ -59,25 +59,44 @@ def getUserPrompt(key: str) -> str:
 # Contextualization
 ####################################################################
 CONTEXTUALIZER_INSTRUCTION: str = """You are a helpful assistant capable of summarizing {content_type} for retrieval."""
-CONTEXTUALIZER_PROMPT: str = """{instruction}
+CONTEXTUALIZER_PROMPT: dict[str,str] = {
+    "LM": """{instruction}
 
-Carefully analyse the {content_type} data from the document and provide a detailed summary.
-These summaries will be embedded and used to retrieve the raw {content_type} elements.
-Also generate hypothetical questions that can be answered based on the given context.
+        Carefully analyse the {content_type} data from the document and provide a detailed summary.
+        These summaries will be embedded and used to retrieve the raw {content_type} elements.
+        Also generate hypothetical questions that can be answered based on the given context.
 
-Document to be summarized:
-{content_to_summarize}
+        Document to be summarized:
+        {content_to_summarize}
 
-Please structure your response in the following format:
-1. A concise summary of the table or text that is well optimized for retrieval.
-2. List the key observations and relevant metrics.
-3. List of the major keywords.
-4. A list of exactly 3 hypothetical questions that the above document could be used to answer.
-"""
-def getContextualizerPrompt(content_type: str,
-                            content_to_summarize: str) -> str:
+        Please structure your response in the following format:
+        1. A concise summary of the table or text that is well optimized for retrieval.
+        2. List the key observations and relevant metrics.
+        3. List of the major keywords.
+        4. A list of exactly 3 hypothetical questions that the above document could be used to answer.
+        """,
+    "VLM": """{instruction}
+
+        Carefully analyze the provided text and/or image data and provide a detailed summary.
+        These summaries will be used for retrieval purposes.
+        Also generate hypothetical questions that can be answered based on the given context.
+        
+        Use this given text for additional information regarding the image:
+        {content_to_summarize}
+
+        Please structure your response in the following format:
+        1. A concise description of the image that is well optimized for retrieval.
+        2. List the key observations and relevant details.
+        3. List of the major keywords or visual elements.
+        4. A list of exactly 3 hypothetical questions that the provided content could be used to answer.
+        """
+}
+def getContextualizerPrompt(key: str,
+                            content_to_summarize: str,
+                            content_type: str) -> str:
+    
     
     instruction: str = CONTEXTUALIZER_INSTRUCTION.format(content_type=content_type)
-    return CONTEXTUALIZER_PROMPT.format(instruction=instruction,
-                                        content_type=content_type,
-                                        content_to_summarize=content_to_summarize)    
+    prompt: str = CONTEXTUALIZER_PROMPT[key]
+    return prompt.format(instruction=instruction,
+                            content_to_summarize=content_to_summarize) 

@@ -9,6 +9,7 @@
 #####################################################################################
 # LLM
 import ollama
+from ._types import OllamaMessage
 
 # Prompts
 from .prompt_template import getSystemPrompt
@@ -32,7 +33,7 @@ class Chatbot:
         self.llm_model: str = local_llm
         
         # List to store the context
-        self.chat_history: list[dict[str,str]] = [{'role': 'system', 'content': system_prompt}]
+        self.chat_history: list[OllamaMessage] = [{'role': 'system', 'content': system_prompt}]
         
         # Context length
         self.context_length: int = 100
@@ -40,10 +41,10 @@ class Chatbot:
         # Default response
         self.default_response: str = "No response was generated" # Adding a type guard
         
-    def addChatHistory(self, message: dict[str, str]) -> None:
+    def addChatHistory(self, message: OllamaMessage) -> None:
         if len(self.chat_history) > self.context_length:
             print("Advised to start a fresh chat as the converation has been going on for long...\n")
-            _: dict[str, str] = self.chat_history.pop(1) # Remove from beginning but keep the original system prompt
+            _: OllamaMessage = self.chat_history.pop(1) # Remove from beginning but keep the original system prompt
             
         self.chat_history.append(message)
        

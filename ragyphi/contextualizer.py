@@ -49,7 +49,7 @@ class LMContextualizer:
         Takes in text to be summarised and summarises it.
         Parameters
         ----------
-        data_type : str
+        content_type : str
             type of the content
         content_to_summarize : str
             text / table along with context that needs to be summarised 
@@ -61,7 +61,9 @@ class LMContextualizer:
         """
         # Contextualize prompt
         ###############################################
-        contextualizerPrompt: str = getContextualizerPrompt(content_type=content_type,content_to_summarize=content_to_summarize)
+        contextualizerPrompt: str = getContextualizerPrompt(key="LM",
+                                                            content_to_summarize=content_to_summarize,
+                                                            content_type=content_type,)
         
         response: ollama.ChatResponse = ollama.chat(model=self.model, messages=[
             {'role': 'system', 'content': self.system_prompt},
@@ -90,35 +92,16 @@ class VLMContextualizer:
         return img_byte_arr.getvalue()
 
     def contextualizeDataWithLM(self, additional_text: str, image: Image.Image) -> str:
-        contextualizerInstruction = """You are a helpful assistant capable of analyzing and summarizing both text and images."""
-        
-        contextualizerPrompt: str = f"""{contextualizerInstruction}
-
-        Carefully analyze the provided text and/or image data and provide a detailed summary.
-        These summaries will be used for retrieval purposes.
-        Also generate hypothetical questions that can be answered based on the given context.
-
-        {"Image data is provided." if image else ""}
-        
-        Use this given text for additional information regarding the image:
-        {additional_text}
-
-        Please structure your response in the following format:
-        1. A concise description of the image that is well optimized for retrieval.
-        2. List the key observations and relevant details.
-        3. List of the major keywords or visual elements.
-        4. A list of exactly 3 hypothetical questions that the provided content could be used to answer.
-        """
+        # Contextualize prompt
+        ###############################################
+        contextualizerPrompt: str = getContextualizerPrompt(key="VLM",
+                                                            content_to_summarize=additional_text,
+                                                            content_type="image",)
         image_data: bytes = self._get_image_bytes(image)
         
         messages: list[OllamaMessage] = [
-            {'role': 'system', 'content': contextualizerInstruction},
-            {'role': 'user', 'content': contextualizerPrompt},
-            {
-                'role': 'user',
-                'content': "Please analyze this image along with the provided text.",
-                'images': [image_data] 
-            }
+            {'role': 'system', 'content': self.system_prompt},
+            {'role': 'user', 'content': contextualizerPrompt,'images': [image_data]},
             ]
 
         response: ollama.ChatResponse = ollama.chat(model=self.model, messages=messages)
