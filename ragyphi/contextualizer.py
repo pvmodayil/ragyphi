@@ -13,6 +13,9 @@ from PIL import Image
 
 # Typing
 from ._types import OllamaMessage
+
+# Prompts
+from ._prompt_template import getContextualizerPrompt, getSystemPrompt
     
 ############################
 # Custom Exception
@@ -26,7 +29,9 @@ class ModelNotFoundError(Exception):
 #                                    Classes
 #####################################################################################
 class LMContextualizer:
-    def __init__(self, local_llm: str) -> None:
+    def __init__(self, 
+                 domain: str, 
+                 local_llm: str) -> None:
         # Test if the model exists
         available_models: list[dict[str,str]] = ollama.list()["models"]
         
@@ -35,12 +40,17 @@ class LMContextualizer:
         
         # If exists initialize class
         self.model: str = local_llm
+        self.system_prompt: str = getSystemPrompt("SCIENTIFIC", domain=domain)
 
-    def contextualizeDataWithLM(self, content_to_summarize: str) -> str:
+    def contextualizeDataWithLM(self, 
+                                content_type: str,
+                                content_to_summarize: str) -> str:
         """
         Takes in text to be summarised and summarises it.
         Parameters
         ----------
+        data_type : str
+            type of the content
         content_to_summarize : str
             text / table along with context that needs to be summarised 
 
@@ -51,33 +61,18 @@ class LMContextualizer:
         """
         # Contextualize prompt
         ###############################################
-        contextualizerInstruction = """You are a helpful assistant capable of summarizing texts and tables for retrieval."""
-        
-        contextualizerPrompt: str = f"""{contextualizerInstruction}
-
-        Carefully analyse the text or table data from the document and provide a detailed summary.
-        These summaries will be embedded and used to retrieve the raw text or table elements.
-        Also generate hypothetical questions that can be answered based on the given context.
-
-        Document to be summarized:
-        {content_to_summarize}
-
-        Please structure your response in the following format:
-        1. A concise summary of the table or text that is well optimized for retrieval.
-        2. List the key observations and relevant metrics.
-        3. List of the major keywords.
-        4. A list of exactly 3 hypothetical questions that the above document could be used to answer.
-        """
+        contextualizerPrompt: str = getContextualizerPrompt(content_type=content_type,content_to_summarize=content_to_summarize)
         
         response: ollama.ChatResponse = ollama.chat(model=self.model, messages=[
-            {'role': 'system', 'content': contextualizerInstruction},
+            {'role': 'system', 'content': self.system_prompt},
             {'role': 'user', 'content': contextualizerPrompt}
         ])
         
         return response['message']['content']
 
 class VLMContextualizer:
-    def __init__(self, local_vllm: str = "granite3.2-vision:latest") -> None:
+    def __init__(self, domain: str,
+                 local_vllm: str) -> None:
         # Test if the model exists
         available_models: list[dict[str,str]] = ollama.list()["models"]
         
@@ -86,7 +81,8 @@ class VLMContextualizer:
         
         # If exists initialize class
         self.model: str = local_vllm
-
+        self.system_prompt: str = getSystemPrompt("SCIENTIFIC", domain=domain)
+        
     @staticmethod
     def _get_image_bytes(image: Image.Image) -> bytes:
         img_byte_arr = BytesIO()

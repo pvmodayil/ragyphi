@@ -65,7 +65,7 @@ def extractText(page: pdfplumber.page.Page, # type: ignore
     # Summarize and store in structured format
     extracted_items.append({
                 "uuid": str(uuid.uuid4()),
-                "text": llm_model.contextualizeDataWithLM(content_to_summarize=f"Page text:\n{page_content_text}"),
+                "text": llm_model.contextualizeDataWithLM(content_type="text",content_to_summarize=f"Page text:\n{page_content_text}"),
                 "metadata":{
                     "file": pdf_filename,
                     "page": page_number, 
@@ -103,7 +103,7 @@ def extractTable(page: pdfplumber.page.Page, # type: ignore
         # Summarize and store in structured format
         extracted_items.append({
                     "uuid": str(uuid.uuid4()), 
-                    "text": llm_model.contextualizeDataWithLM(
+                    "text": llm_model.contextualizeDataWithLM(content_type="table",
                         content_to_summarize=f"Page text:\n{page_content_text}\nTable:\n{table_content_text}"),
                     "metadata":{
                         "file": pdf_filename,
@@ -227,7 +227,8 @@ def processPDF(base_dir: str,
         for page in tqdm(pdf.pages, desc=f"Processing {pdf_path} pages"):
             # Initialize the LLM model
             ###########################################
-            llm_model: LMContextualizer = LMContextualizer(local_llm=local_llm)  
+            llm_model: LMContextualizer = LMContextualizer(domain="PCB design",
+                                                           local_llm=local_llm)  
             
             # Extract text and contextualize
             ###########################################
@@ -248,7 +249,8 @@ def processPDF(base_dir: str,
             # Initialize the Vision LLM model
             ##########################################
             del llm_model # delete the loaded llm model
-            vllm_model: VLMContextualizer = VLMContextualizer(local_vllm=local_vllm)
+            vllm_model: VLMContextualizer = VLMContextualizer(domain="PCB design",
+                                                              local_vllm=local_vllm)
             
             # Extract images and contextualize
             #########################################
