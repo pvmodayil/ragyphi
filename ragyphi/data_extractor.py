@@ -27,7 +27,7 @@ from ._types import ExtractedItems
 #                                    Functions
 #####################################################################################
 # Create the directories
-def create_directories(base_dir: str) -> None:
+def createDirectories(base_dir: str) -> None:
     """
     Takes in a base directory path and creates required folders in it
     Parameters
@@ -221,7 +221,7 @@ def processDocuments(local_llm: str = "llama3.2:3b-instruct-fp16",
     base_dir: str = os.path.join(os.getcwd(),"data")
     checkFolder(base_dir)
     
-    create_directories(base_dir)
+    createDirectories(base_dir)
      
     # Extract information from pdf files
     ###########################################
