@@ -41,7 +41,7 @@ class Chatbot:
         # Default response
         self.default_response: str = "No response was generated" # Adding a type guard
         
-    def addChatHistory(self, message: OllamaMessage) -> None:
+    def _addChatHistory(self, message: OllamaMessage) -> None:
         if len(self.chat_history) > self.context_length:
             print("Advised to start a fresh chat as the converation has been going on for long...\n")
             _: OllamaMessage = self.chat_history.pop(1) # Remove from beginning but keep the original system prompt
@@ -52,14 +52,14 @@ class Chatbot:
              user_prompt: str) -> str:
         
         # Add the input question to chat history
-        self.addChatHistory({'role': 'user', 'content': user_prompt})
+        self._addChatHistory({'role': 'user', 'content': user_prompt})
         
         
         response: str = ollama.chat(model=self.llm_model, messages=self.chat_history).message.content or \
             self.default_response
         
         # Add the model response to chat history
-        self.addChatHistory({'role': 'assistant', 'content': response})
+        self._addChatHistory({'role': 'assistant', 'content': response})
         
         return response
         
