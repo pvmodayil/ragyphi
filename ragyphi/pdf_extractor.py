@@ -23,12 +23,14 @@ from tqdm import tqdm
 from . import image_extractor
 
 # Typing
+from typing import Union
 from ._types import ExtractedItems
 
 #####################################################################################
 #                                    Functions
 #####################################################################################
-def saveData(path: str, data: str) -> None:
+def saveData(path: str, 
+             data: Union[str, pd.DataFrame, Image.Image]) -> None:
     """
     Open file and write text data
     
@@ -36,8 +38,8 @@ def saveData(path: str, data: str) -> None:
     ----------
     path : str
         file path
-    data : str
-        text data
+    data : str | pandas Dataframe | Image.Image 
+        text | table | image
     
     Raises
     ------
@@ -45,10 +47,19 @@ def saveData(path: str, data: str) -> None:
        OSError if the path string contains unaccepted characters when trying to save data locally
     """
     try:
-        with open(path, 'w') as f:
-            f.write(data)
+        if isinstance(data, pd.DataFrame):
+            data.to_csv(path, index=False)
+        elif isinstance(data, Image.Image):
+            data.save(path)
+        elif isinstance(data, str):
+            with open(path, 'w') as f:
+                f.write(data)
+        else:
+            raise ValueError(f"Invalid data_type '{type(data)}' Provide either pandas Dataframe, PIL Image or String.")
     except OSError:
         print(f"Something wrong with file name: {path}")
+    except Exception as e:
+        print(f"An unexpected error occurred: {str(e)}")
 
 def extractText(page: pdfplumber.page.Page, # type: ignore
                 base_dir: str,
@@ -73,9 +84,9 @@ def extractText(page: pdfplumber.page.Page, # type: ignore
                     "original_content": page_content_text}
                 })
     # Save text
-    saveData(path=os.path.join(base_dir,"text",f"{pdf_filename}_{page_number}_text.txt"), 
+    saveData(path=os.path.join(base_dir,"text",f"{pdf_filename}_{page_number}_text.txt"),
             data=page_content_text)
-    saveData(path=os.path.join(base_dir,"text",f"{pdf_filename}_{page_number}_context.md"), 
+    saveData(path=os.path.join(base_dir,"text",f"{pdf_filename}_{page_number}_context.md"),
             data=extracted_items[-1]["text"])
     
     return extracted_items
@@ -113,13 +124,10 @@ def extractTable(page: pdfplumber.page.Page, # type: ignore
                     })
 
         # Save table
-        table_filename: str = os.path.join(base_dir,"tables",f"{pdf_filename}_{page_number}_table_{table_id}.csv")  
         saveData(path=os.path.join(base_dir,"tables",f"{pdf_filename}_{page_number}_context_{table_id}.md"), 
                 data=extracted_items[-1]["text"])
-        try:
-            df.to_csv(table_filename,index=False)
-        except OSError:
-            print(f"Something wrong with file name: {table_filename}")
+        saveData(path=os.path.join(base_dir,"tables",f"{pdf_filename}_{page_number}_table_{table_id}.csv"), 
+                data=df)
             
     return extracted_items
 
@@ -170,8 +178,7 @@ def extractImage(page: pdfplumber.page.Page, # type: ignore
      
     if extracted_images:
         for img_id, image in enumerate(extracted_images):
-            img_save_path: str = os.path.join(base_dir,"images",f"{pdf_filename}_{page_number}_image_{img_id}.jpg")
-            image.save(img_save_path)
+            img_save_path: str = os.path.join(base_dir,"images",f"{pdf_filename}_{page_number}_image_{img_id}.png")
             # Summarize and store in structured format
             extracted_items.append({
                         "uuid": str(uuid.uuid4()), 
@@ -184,6 +191,7 @@ def extractImage(page: pdfplumber.page.Page, # type: ignore
                         })
             saveData(path=os.path.join(base_dir,"images",f"{pdf_filename}_{page_number}_context_{img_id}.md"), 
                 data=extracted_items[-1]["text"])
+            saveData(path=img_save_path, data=image)
 
     return extracted_items
               
