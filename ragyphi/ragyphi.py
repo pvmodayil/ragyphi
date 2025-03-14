@@ -25,7 +25,7 @@ from .ollama_chat import Chatbot
 # from ollama._types import ResponseError
 
 # Prompt
-from .prompt_template import getContextualizerPrompt, getSystemPrompt
+from .prompt_template import getUserPrompt
 
 ############################
 # Custom Exception
@@ -170,24 +170,7 @@ def rag(question: str,
         response,context
     """
     # Prompt to the llm
-    user_prompt: str = """
-    Here is the context to use to answer the question:\
-
-    {context} 
-
-
-    Think carefully about the above context which may include tabular data. \
-
-    Now, carefully review the user question given below and provide a clear answer:\
-
-    {question}\
-
-    Please structure your response in the following format:
-    Answer: Provide a concise answer to the question.
-    Context: Explain the relevant context from the provided information.
-    Questions: Suggest follow-up questions for clarification or further exploration.
-
-    If you don't know the answer, just say that you don't know, don't try to make up an answer."""
+    user_prompt: str = getUserPrompt(key="RAG")
     
     # Retrieve context and generate response
     context: str = retrieveContext(question,extracted_data,similarity_threshold)

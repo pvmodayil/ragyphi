@@ -51,7 +51,10 @@ USER_PROMPT: dict[str,str]= {
     Answer: Provide a concise answer to the question.
     Context: Explain the relevant context from the provided information.
     Questions: Suggest follow-up questions for clarification or further exploration."""
-} 
+}
+
+def getUserPrompt(key: str) -> str:
+    return USER_PROMPT[key]
 
 # Contextualization
 ####################################################################
