@@ -40,7 +40,7 @@ class LMContextualizer:
         
         # If exists initialize class
         self.model: str = local_llm
-        self.system_prompt: str = getSystemPrompt("SCIENTIFIC", domain=domain)
+        self.system_prompt: str = getSystemPrompt("SCIENTIFIC_ANALYST", domain=domain)
 
     def contextualizeDataWithLM(self, 
                                 content_type: str,
@@ -81,7 +81,7 @@ class VLMContextualizer:
         
         # If exists initialize class
         self.model: str = local_vllm
-        self.system_prompt: str = getSystemPrompt("SCIENTIFIC", domain=domain)
+        self.system_prompt: str = getSystemPrompt("SCIENTIFIC_ANALYST", domain=domain)
         
     @staticmethod
     def _get_image_bytes(image: Image.Image) -> bytes:
