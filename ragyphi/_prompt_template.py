@@ -5,10 +5,15 @@
 #################################################
 
 # system definition
+###################################################################
 SYSTEM_PROMPT: dict[str,str] = {
-    # System prompt for scientific research
-    "SCIENTIFIC": """You are an expert assistant working along with researchers and engineers in the {domain} domain. 
+    # System prompt for scientific research analysis
+    "SCIENTIFIC_ANALYST": """You are an expert assistant working along with researchers and engineers in the {domain} domain. 
     You are capable of analyzing scientific documents like data sheets, research papers, reports, thesis, articles, reviews, and presentations.""",
+    
+    "SCIENTIFIC_ASSISTANT": """You are an expert assistant working along with researchers and engineers in the {domain} domain.
+    You are capable of analyzing a given contextual information and reponding to questions accurately.
+    You will say that you don't know the answer if you don't know the answer, and ask clarification questions if necessary.""",
     
     # General question answer prompt
     "QA": """You are a helpful assistant capable of answering questions with accuracy in a concise format.
@@ -30,6 +35,23 @@ def getSystemPrompt(key: str, **kwargs) -> str:
         return formatted_prompt
     
     return prompt
+
+# user prompts
+####################################################################
+USER_PROMPT: dict[str,str]= {
+    "RAG": """Here is the context to use to answer the question:
+
+    {context} 
+    
+    Think carefully about the above context and review the user question given below:
+
+    {question}
+
+    Based on the context answer the question accurately and structure your response in the following format:
+    Answer: Provide a concise answer to the question.
+    Context: Explain the relevant context from the provided information.
+    Questions: Suggest follow-up questions for clarification or further exploration."""
+} 
 
 # Contextualization
 ####################################################################
