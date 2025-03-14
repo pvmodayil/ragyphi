@@ -166,7 +166,7 @@ def extractImage(page: pdfplumber.page.Page, # type: ignore
     assert isinstance(page_image, Image.Image), "page_image is not a PIL Image object"
     
     # Get the cropped images from YOLO extractor
-    extracted_images: list[Image.Image] = image_extractor.get_images(page_image=page_image) 
+    extracted_images: list[Image.Image] = image_extractor.getImages(page_image=page_image) 
      
     if extracted_images:
         for img_id, image in enumerate(extracted_images):

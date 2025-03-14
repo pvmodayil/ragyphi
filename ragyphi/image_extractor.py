@@ -11,7 +11,7 @@ from ultralytics import YOLO
 from PIL import Image
 from . import os, np
 
-def pre_process_image(page_image: Image.Image) -> Image.Image:
+def preProcessImage(page_image: Image.Image) -> Image.Image:
     YOLO_INPUT_SIZE: int = 640
     
     # Resize the image to 640x640 pixels
@@ -20,7 +20,7 @@ def pre_process_image(page_image: Image.Image) -> Image.Image:
     return resized_image
 
 # Function to crop bounding boxes from the image
-def crop_bounding_boxes(original_image: Image.Image, 
+def cropBoundingBoxes(original_image: Image.Image, 
                         boxes: np.ndarray, 
                         class_ids: np.ndarray, 
                         target_class: int =0) -> list[Image.Image]:
@@ -51,9 +51,9 @@ def crop_bounding_boxes(original_image: Image.Image,
     
     return cropped_images
 
-def get_images(page_image: Image.Image) -> list[Image.Image]:
+def getImages(page_image: Image.Image) -> list[Image.Image]:
     # Resize the image to YOLO standard (640,640)
-    image: Image.Image = pre_process_image(page_image)
+    image: Image.Image = preProcessImage(page_image)
     
     # Load and predict with YOLO
     model_path: str = os.path.join(os.getcwd(),"ragyphi","weights","yolo_model.pt") # Edit later for package suitable paths
@@ -65,6 +65,6 @@ def get_images(page_image: Image.Image) -> list[Image.Image]:
     class_ids: np.ndarray = results[0].boxes.cls.cpu().numpy().astype(int)  # Class IDs
 
     # Crop only the diagrams
-    cropped_images: list[Image.Image] = crop_bounding_boxes(page_image, boxes, class_ids, target_class=0)
+    cropped_images: list[Image.Image] = cropBoundingBoxes(page_image, boxes, class_ids, target_class=0)
     
     return cropped_images
