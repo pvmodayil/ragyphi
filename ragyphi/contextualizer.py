@@ -15,7 +15,7 @@ from PIL import Image
 from ._types import OllamaMessage
 
 # Prompts
-from ._prompt_template import getContextualizerPrompt, getSystemPrompt
+from .prompt_template import getContextualizerPrompt, getSystemPrompt
     
 ############################
 # Custom Exception

@@ -11,7 +11,7 @@
 import ollama
 
 # Prompts
-from ._prompt_template import getSystemPrompt
+from .prompt_template import getSystemPrompt
 
 ############################
 # Custom Exception

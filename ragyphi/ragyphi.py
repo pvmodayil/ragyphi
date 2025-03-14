@@ -25,7 +25,7 @@ from .ollama_chat import Chatbot
 # from ollama._types import ResponseError
 
 # Prompt
-from ._prompt_template import getContextualizerPrompt, getSystemPrompt
+from .prompt_template import getContextualizerPrompt, getSystemPrompt
 
 ############################
 # Custom Exception
