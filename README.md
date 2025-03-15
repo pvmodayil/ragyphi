@@ -2,6 +2,24 @@
 An entire RAG (Retrieval-Augmented Generation) pipeline library designed to streamline the integration of language models with retrieval systems.
 ragyphi can extract text, table, and image data from your pdf files and uses clever llm-based summarization techniques to augment the extracted data for efficient retrieval. 
 
+## Why Choose ragyphi?
+
+In the realm of Retrieval-Augmented Generation (RAG) pipelines, many frameworks struggle to effectively comprehend documents and perform accurate extractions. Enter **ragyphi**—a solution designed with precision in mind.
+
+### Key Features
+
+- **Effortless PDF Extraction**: Leveraging the power of **pdfplumber**, a lightweight PDF extraction library, ragyphi enables seamless text and table extraction without the need for cumbersome system-level installations.
+  
+- **Enhanced Image Detection**: Current libraries often fall short when it comes to image extraction, resulting in lost data and subpar user query responses. ragyphi tackles this challenge head-on by employing a fine-tuned **YOLOv11 model**. This model expertly detects images within PDF pages, cropping them accurately based on predicted bounding box values.
+
+- **Smart Data Augmentation**: Once extracted, the data is not only summarized but also enriched with hypothetical questions. This approach enhances semantic similarity searches between user queries and documents, ensuring more precise results.
+
+- **Local LLM Inferences**: With the integration of **Ollama models**, all large language model (LLM) inferences occur locally on your machine, prioritizing your data privacy while delivering powerful insights.
+
+### Who Can Benefit?
+
+Ragyphi is tailored for researchers and professionals who rely heavily on sensitive data sheets and values in their scientific work. However, its versatility means that anyone looking to create a local database with LLM assistance can benefit from what ragyphi has to offer!
+
 ## Table of Contents
 - [Installation](#installation)
 - [Usage](#usage)
