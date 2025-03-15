@@ -1,7 +1,7 @@
 #################################################
 # Author        : Philip Varghese Modayil
 # Last Update   : 05-03-2025
-# Topic         : 
+# Topic         : Chatbot with Ollama model
 #################################################
 
 #####################################################################################
@@ -10,6 +10,9 @@
 # LLM
 import ollama
 from ._types import OllamaMessage
+
+# Typing
+from typing import Union
 
 # Prompts
 from .prompt_template import getSystemPrompt
@@ -38,9 +41,6 @@ class Chatbot:
         # Context length
         self.context_length: int = 100
         
-        # Default response
-        self.default_response: str = "No response was generated" # Adding a type guard
-        
     def _addChatHistory(self, message: OllamaMessage) -> None:
         if len(self.chat_history) > self.context_length:
             print("Advised to start a fresh chat as the converation has been going on for long...\n")
@@ -55,8 +55,10 @@ class Chatbot:
         self._addChatHistory({'role': 'user', 'content': user_prompt})
         
         
-        response: str = ollama.chat(model=self.llm_model, messages=self.chat_history).message.content or \
-            self.default_response
+        response: Union[str,None] = ollama.chat(model=self.llm_model, messages=self.chat_history).message.content
+        
+        if response is None:
+            return "No response was generated" # Make sure that a string is returned always
         
         # Add the model response to chat history
         self._addChatHistory({'role': 'assistant', 'content': response})
